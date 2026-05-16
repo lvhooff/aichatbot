@@ -4,6 +4,11 @@
     "src/renderer/src/env.d.ts",
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
+    "src/renderer/components/**/*",
+    "src/renderer/hooks/**/*",
+    "src/renderer/utils/**/*",
+    "src/renderer/types.ts",
+    "src/main/**/*",
     "src/preload/*.d.ts",
     "tests/renderer/**/*"
   ],
@@ -15,6 +20,7 @@
       "@renderer/*": [
         "src/renderer/src/*"
       ]
-    }
+    },
+    "types": ["@testing-library/jest-dom"]
   }
 }

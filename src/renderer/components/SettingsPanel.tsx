@@ -10,7 +10,7 @@ interface Props {
 export function SettingsPanel({ settings, onSave, onClose }: Props) {
   const [draft, setDraft] = useState<AppSettings>(structuredClone(settings))
 
-  function set<K extends keyof AppSettings>(section: K, updates: Partial<AppSettings[K]>) {
+  function set<K extends 'llm' | 'stt' | 'tts'>(section: K, updates: Partial<AppSettings[K]>) {
     setDraft((prev) => ({ ...prev, [section]: { ...prev[section], ...updates } }))
   }
 
