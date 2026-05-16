@@ -5,6 +5,7 @@ export class MacOSSayAdapter implements TTSAdapter {
   private process?: ChildProcess
 
   speak(text: string): Promise<void> {
+    this.stop()
     return new Promise((resolve, reject) => {
       this.process = spawn('say', [text])
       this.process.on('close', (code) => {

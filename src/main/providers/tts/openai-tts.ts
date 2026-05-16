@@ -14,6 +14,7 @@ export class OpenAITTSAdapter implements TTSAdapter {
   }
 
   async speak(text: string): Promise<void> {
+    this.stop()
     const response = await this.client.audio.speech.create({
       model: 'tts-1',
       voice: this.voice as 'alloy',
