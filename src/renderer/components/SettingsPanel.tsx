@@ -19,8 +19,8 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
       <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: 360, maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Settings</h2>
 
-        <fieldset style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <legend style={{ fontSize: 13, fontWeight: 600 }}>LLM</legend>
+        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>LLM</p>
           <label htmlFor="llm-provider" style={{ fontSize: 13 }}>LLM Provider</label>
           <select id="llm-provider" value={draft.llm.provider} onChange={(e) => set('llm', { provider: e.target.value as AppSettings['llm']['provider'] })}>
             <option value="claude">Claude (Anthropic)</option>
@@ -42,10 +42,10 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
               <input id="ollama-url" value={draft.llm.baseUrl ?? ''} onChange={(e) => set('llm', { baseUrl: e.target.value })} placeholder="http://localhost:11434" />
             </>
           )}
-        </fieldset>
+        </div>
 
-        <fieldset style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <legend style={{ fontSize: 13, fontWeight: 600 }}>Speech-to-Text</legend>
+        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>Speech-to-Text</p>
           <label htmlFor="stt-provider" style={{ fontSize: 13 }}>STT Provider</label>
           <select id="stt-provider" value={draft.stt.provider} onChange={(e) => set('stt', { provider: e.target.value as AppSettings['stt']['provider'] })}>
             <option value="whisper-api">OpenAI Whisper API</option>
@@ -57,10 +57,10 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
               <input id="stt-key" type="password" value={draft.stt.apiKey} onChange={(e) => set('stt', { apiKey: e.target.value })} placeholder="sk-..." />
             </>
           )}
-        </fieldset>
+        </div>
 
-        <fieldset style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <legend style={{ fontSize: 13, fontWeight: 600 }}>Text-to-Speech</legend>
+        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>Text-to-Speech</p>
           <label htmlFor="tts-provider" style={{ fontSize: 13 }}>TTS Provider</label>
           <select id="tts-provider" value={draft.tts.provider} onChange={(e) => set('tts', { provider: e.target.value as AppSettings['tts']['provider'] })}>
             <option value="macos-say">macOS say (free)</option>
@@ -81,7 +81,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
               </select>
             </>
           )}
-        </fieldset>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label htmlFor="window-size" style={{ fontSize: 13 }}>Conversation Window (turns)</label>
