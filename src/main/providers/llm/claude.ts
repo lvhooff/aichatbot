@@ -2,11 +2,17 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { LLMAdapter, Message } from './interface'
 
 export class ClaudeAdapter implements LLMAdapter {
-  private client: Anthropic
+  private _client?: Anthropic
   private abortController?: AbortController
 
-  constructor(apiKey: string, private model: string) {
-    this.client = new Anthropic({ apiKey })
+  constructor(private apiKey: string, private model: string) {}
+
+  private get client(): Anthropic {
+    if (!this._client) {
+      if (!this.apiKey) throw new Error('Anthropic API key not configured — open Settings')
+      this._client = new Anthropic({ apiKey: this.apiKey })
+    }
+    return this._client
   }
 
   async chat(messages: Message[], onToken: (token: string) => void): Promise<string> {

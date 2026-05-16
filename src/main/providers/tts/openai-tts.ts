@@ -6,11 +6,17 @@ import { join } from 'path'
 import type { TTSAdapter } from './interface'
 
 export class OpenAITTSAdapter implements TTSAdapter {
-  private client: OpenAI
+  private _client?: OpenAI
   private afplayProcess?: ChildProcess
 
-  constructor(apiKey: string, private voice: string = 'alloy') {
-    this.client = new OpenAI({ apiKey })
+  constructor(private apiKey: string, private voice: string = 'alloy') {}
+
+  private get client(): OpenAI {
+    if (!this._client) {
+      if (!this.apiKey) throw new Error('OpenAI API key not configured — open Settings')
+      this._client = new OpenAI({ apiKey: this.apiKey })
+    }
+    return this._client
   }
 
   async speak(text: string): Promise<void> {

@@ -5,6 +5,10 @@ import { SettingsManager } from './settings'
 import { Pipeline } from './pipeline'
 import { registerIpcHandlers } from './ipc'
 
+if (is.dev) {
+  app.commandLine.appendSwitch('remote-debugging-port', '9222')
+}
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 420,
