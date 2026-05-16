@@ -9,7 +9,12 @@ vi.mock('openai', () => {
       }
     }
   }
-  return { default: MockOpenAI }
+  const toFile = vi.fn().mockImplementation(async (buffer: Buffer, name: string, opts: any) => ({
+    buffer,
+    name,
+    ...opts,
+  }))
+  return { default: MockOpenAI, toFile }
 })
 
 describe('WhisperAPIAdapter', () => {

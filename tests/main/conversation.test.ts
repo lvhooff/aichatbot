@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { ConversationManager } from '../../src/main/conversation'
-import type { Message } from '../../src/main/providers/llm/interface'
 
 describe('ConversationManager', () => {
   let mgr: ConversationManager
