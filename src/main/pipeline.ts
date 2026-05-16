@@ -7,6 +7,7 @@ import { MacOSSTTAdapter } from './providers/stt/macos'
 import { ClaudeAdapter } from './providers/llm/claude'
 import { OpenAIAdapter } from './providers/llm/openai'
 import { OllamaAdapter } from './providers/llm/ollama'
+import { OpenRouterAdapter } from './providers/llm/openrouter'
 import { MacOSSayAdapter } from './providers/tts/macos-say'
 import { OpenAITTSAdapter } from './providers/tts/openai-tts'
 
@@ -23,6 +24,7 @@ function createLLMAdapter(settings: AppSettings['llm']): LLMAdapter {
     case 'claude': return new ClaudeAdapter(settings.apiKey, settings.model)
     case 'openai': return new OpenAIAdapter(settings.apiKey, settings.model)
     case 'ollama': return new OllamaAdapter(settings.model, settings.baseUrl)
+    case 'openrouter': return new OpenRouterAdapter(settings.apiKey, settings.model)
     default: throw new Error(`Unknown LLM provider: ${settings.provider}`)
   }
 }

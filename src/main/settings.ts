@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
 export interface LLMSettings {
-  provider: 'claude' | 'openai' | 'ollama'
+  provider: 'claude' | 'openai' | 'ollama' | 'openrouter'
   model: string
   apiKey: string
   baseUrl?: string

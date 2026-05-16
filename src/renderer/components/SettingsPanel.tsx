@@ -25,10 +25,11 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
           <select id="llm-provider" value={draft.llm.provider} onChange={(e) => set('llm', { provider: e.target.value as AppSettings['llm']['provider'] })}>
             <option value="claude">Claude (Anthropic)</option>
             <option value="openai">OpenAI GPT</option>
+            <option value="openrouter">OpenRouter</option>
             <option value="ollama">Ollama (local)</option>
           </select>
           <label htmlFor="llm-model" style={{ fontSize: 13 }}>Model</label>
-          <input id="llm-model" value={draft.llm.model} onChange={(e) => set('llm', { model: e.target.value })} placeholder="e.g. claude-sonnet-4-6" />
+          <input id="llm-model" value={draft.llm.model} onChange={(e) => set('llm', { model: e.target.value })} placeholder={draft.llm.provider === 'openrouter' ? 'e.g. anthropic/claude-opus-4' : 'e.g. claude-sonnet-4-6'} />
           {draft.llm.provider !== 'ollama' && (
             <>
               <label htmlFor="llm-key" style={{ fontSize: 13 }}>API Key</label>
