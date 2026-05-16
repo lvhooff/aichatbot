@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { AppSettings } from '../main/settings'
 import type { Message } from '../main/providers/llm/interface'
 
-contextBridge.exposeInMainWorld('api', {
+if (process.contextIsolated) {
+  contextBridge.exposeInMainWorld('api', {
   transcribe: (audioBuffer: ArrayBuffer, mimeType: string): Promise<string> =>
     ipcRenderer.invoke('stt:transcribe', audioBuffer, mimeType),
 
@@ -29,4 +30,5 @@ contextBridge.exposeInMainWorld('api', {
 
   saveSettings: (settings: AppSettings): Promise<void> =>
     ipcRenderer.invoke('settings:save', settings),
-})
+  })
+}

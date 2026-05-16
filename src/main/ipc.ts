@@ -10,7 +10,7 @@ export function registerIpcHandlers(pipeline: Pipeline, settingsManager: Setting
 
   ipcMain.handle('llm:chat', async (_event, messages: Message[]) => {
     return pipeline.chat(messages, (token) => {
-      webContents.send('llm:token', token)
+      if (!webContents.isDestroyed()) webContents.send('llm:token', token)
     })
   })
 
