@@ -26,7 +26,7 @@ export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
 
   useEffect(() => {
     if (vad.errored) {
-      onError(new Error(vad.errored))
+      onError(vad.errored instanceof Error ? vad.errored : new Error(String(vad.errored)))
     }
   }, [vad.errored, onError])
 
