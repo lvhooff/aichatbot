@@ -1,22 +1,32 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
+import type { AppSettings } from '../main/settings'
+import type { Message } from '../main/providers/llm/interface'
 
-// Custom APIs for renderer
-const api = {}
+contextBridge.exposeInMainWorld('api', {
+  transcribe: (audioBuffer: ArrayBuffer, mimeType: string): Promise<string> =>
+    ipcRenderer.invoke('stt:transcribe', audioBuffer, mimeType),
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
-}
+  chat: (messages: Message[]): Promise<string> =>
+    ipcRenderer.invoke('llm:chat', messages),
+
+  onLLMToken: (callback: (token: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, token: string) => callback(token)
+    ipcRenderer.on('llm:token', handler)
+    return () => ipcRenderer.removeListener('llm:token', handler)
+  },
+
+  speak: (text: string): Promise<void> =>
+    ipcRenderer.invoke('tts:speak', text),
+
+  stopSpeaking: (): Promise<void> =>
+    ipcRenderer.invoke('tts:stop'),
+
+  cancelLLM: (): Promise<void> =>
+    ipcRenderer.invoke('llm:cancel'),
+
+  getSettings: (): Promise<AppSettings> =>
+    ipcRenderer.invoke('settings:get'),
+
+  saveSettings: (settings: AppSettings): Promise<void> =>
+    ipcRenderer.invoke('settings:save', settings),
+})
