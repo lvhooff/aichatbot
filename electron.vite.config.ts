@@ -14,11 +14,5 @@ export default defineConfig({
   renderer: {
     plugins: [react()],
     build: { rollupOptions: { input: { index: resolve(__dirname, 'src/renderer/index.html') } } }
-  },
-  // @ts-ignore - vitest config is not in electron-vite types but is supported at runtime
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./tests/setup.ts'],
   }
 })
