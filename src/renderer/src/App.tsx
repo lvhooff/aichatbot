@@ -151,10 +151,21 @@ export default function App() {
         <span style={{ fontWeight: 600, fontSize: 15 }}>AI Chatbot</span>
         <button
           onClick={() => setSettingsOpen(true)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: 'none',
+            border: '1px solid #ccc',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: 13,
+            padding: '4px 10px',
+            color: '#555',
+          }}
           aria-label="Settings"
         >
-          ⚙
+          ⚙ Settings
         </button>
       </div>
 
