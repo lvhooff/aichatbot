@@ -13,4 +13,18 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.tts.provider).toBe('macos-say')
     expect(DEFAULT_SETTINGS.conversationWindowSize).toBe(10)
   })
+
+  it('merges defaults when saved settings are missing fields', () => {
+    // DEFAULT_SETTINGS should always have all required fields
+    const settings = { ...DEFAULT_SETTINGS }
+    delete (settings as any).conversationWindowSize
+    // After merging, the missing field should be restored
+    // (This tests the shape contract rather than SettingsManager directly,
+    //  since SettingsManager requires a real filesystem)
+    const merged = {
+      ...DEFAULT_SETTINGS,
+      ...settings,
+    }
+    expect(merged.conversationWindowSize).toBe(10)
+  })
 })

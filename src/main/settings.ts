@@ -45,11 +45,18 @@ export class SettingsManager {
   }
 
   private load(): AppSettings {
-    if (!existsSync(this.filePath)) return { ...DEFAULT_SETTINGS }
+    if (!existsSync(this.filePath)) return structuredClone(DEFAULT_SETTINGS)
     try {
-      return JSON.parse(readFileSync(this.filePath, 'utf-8'))
+      const saved = JSON.parse(readFileSync(this.filePath, 'utf-8'))
+      return {
+        ...DEFAULT_SETTINGS,
+        ...saved,
+        llm: { ...DEFAULT_SETTINGS.llm, ...saved.llm },
+        stt: { ...DEFAULT_SETTINGS.stt, ...saved.stt },
+        tts: { ...DEFAULT_SETTINGS.tts, ...saved.tts },
+      }
     } catch {
-      return { ...DEFAULT_SETTINGS }
+      return structuredClone(DEFAULT_SETTINGS)
     }
   }
 
