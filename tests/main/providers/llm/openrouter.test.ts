@@ -6,13 +6,13 @@ vi.mock('openai', () => {
     [Symbol.asyncIterator]: async function* () {
       yield { choices: [{ delta: { content: 'Hello' } }] }
       yield { choices: [{ delta: { content: ' from OpenRouter' } }] }
-    },
+    }
   }
   const MockOpenAI = function (this: any) {
     this.chat = {
       completions: {
-        create: vi.fn().mockReturnValue(mockStream),
-      },
+        create: vi.fn().mockReturnValue(mockStream)
+      }
     }
   }
   return { default: MockOpenAI }
@@ -27,10 +27,7 @@ describe('OpenRouterAdapter', () => {
 
   it('streams tokens and returns full text', async () => {
     const tokens: string[] = []
-    const result = await adapter.chat(
-      [{ role: 'user', content: 'hi' }],
-      (t) => tokens.push(t)
-    )
+    const result = await adapter.chat([{ role: 'user', content: 'hi' }], (t) => tokens.push(t))
     expect(tokens).toEqual(['Hello', ' from OpenRouter'])
     expect(result).toBe('Hello from OpenRouter')
   })

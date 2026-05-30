@@ -63,6 +63,7 @@ export class OllamaAdapter implements LLMAdapter {
     return fullText
   }
 
-  // Ollama streaming does not support AbortSignal; cancel is a no-op
-  cancel(): void {}
+  cancel(): void {
+    // Ollama streaming does not support AbortSignal; cancel is a no-op.
+  }
 }

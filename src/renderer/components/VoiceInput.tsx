@@ -13,7 +13,7 @@ export function VoiceInput({ isPlaying, onAudioReady }: Props) {
   const { status } = useVAD({
     isPlaying,
     onAudioReady,
-    onError: (err) => console.error('VAD error:', err),
+    onError: (err) => console.error('VAD error:', err)
   })
 
   return <StatusBar status={status} isPlaying={isPlaying} />

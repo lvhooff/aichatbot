@@ -20,7 +20,7 @@ export class WhisperAPIAdapter implements STTAdapter {
 
     const response = await this.client.audio.transcriptions.create({
       file,
-      model: 'whisper-1',
+      model: 'whisper-1'
     })
 
     return response.text

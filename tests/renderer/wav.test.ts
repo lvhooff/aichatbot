@@ -7,8 +7,12 @@ describe('encodeWAV', () => {
     const buffer = encodeWAV(samples)
     const view = new DataView(buffer)
     // RIFF header magic bytes
-    expect(String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))).toBe('RIFF')
-    expect(String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11))).toBe('WAVE')
+    expect(
+      String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
+    ).toBe('RIFF')
+    expect(
+      String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11))
+    ).toBe('WAVE')
   })
 
   it('output length = 44 header + 2 bytes per sample', () => {

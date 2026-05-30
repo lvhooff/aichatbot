@@ -3,7 +3,11 @@ import type { Pipeline } from './pipeline'
 import type { SettingsManager } from './settings'
 import type { Message } from './providers/llm/interface'
 
-export function registerIpcHandlers(pipeline: Pipeline, settingsManager: SettingsManager, webContents: WebContents): void {
+export function registerIpcHandlers(
+  pipeline: Pipeline,
+  settingsManager: SettingsManager,
+  webContents: WebContents
+): void {
   ipcMain.handle('stt:transcribe', async (_event, audioBuffer: ArrayBuffer, mimeType: string) => {
     return pipeline.transcribe(Buffer.from(audioBuffer), mimeType)
   })

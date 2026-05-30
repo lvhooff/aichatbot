@@ -19,14 +19,14 @@ export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
       ort.env.wasm.wasmPaths = '/'
     },
     // Higher threshold while TTS is playing — prevents AI voice triggering barge-in
-    positiveSpeechThreshold: isPlaying ? 0.90 : 0.50,
+    positiveSpeechThreshold: isPlaying ? 0.9 : 0.5,
     negativeSpeechThreshold: 0.35,
     minSpeechMs: 240,
     preSpeechPadMs: 60,
     onSpeechEnd: (audio: Float32Array) => {
       const wav = encodeWAV(audio)
       onAudioReady(wav)
-    },
+    }
   })
 
   useEffect(() => {

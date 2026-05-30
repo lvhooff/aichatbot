@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { WhisperAPIAdapter } from '../../../../src/main/providers/stt/whisper-api'
 
 vi.mock('openai', () => {
-  const MockOpenAI = function(this: any) {
+  const MockOpenAI = function (this: any) {
     this.audio = {
       transcriptions: {
         create: vi.fn().mockResolvedValue({ text: 'hello world' })
@@ -12,7 +12,7 @@ vi.mock('openai', () => {
   const toFile = vi.fn().mockImplementation(async (buffer: Buffer, name: string, opts: any) => ({
     buffer,
     name,
-    ...opts,
+    ...opts
   }))
   return { default: MockOpenAI, toFile }
 })

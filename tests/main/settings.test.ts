@@ -23,7 +23,7 @@ describe('DEFAULT_SETTINGS', () => {
     //  since SettingsManager requires a real filesystem)
     const merged = {
       ...DEFAULT_SETTINGS,
-      ...settings,
+      ...settings
     }
     expect(merged.conversationWindowSize).toBe(10)
   })

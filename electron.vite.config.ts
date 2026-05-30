@@ -46,7 +46,7 @@ export default defineConfig({
       // turns that into an unsupported dynamic-require shim that throws. The
       // worker `.mjs`/`.wasm` files are loaded at runtime from public/ via
       // `ort.env.wasm.wasmPaths = '/'` (see src/renderer/hooks/useVAD.ts).
-      include: ['@ricky0123/vad-react', '@ricky0123/vad-web', 'onnxruntime-web'],
+      include: ['@ricky0123/vad-react', '@ricky0123/vad-web', 'onnxruntime-web']
     },
     build: { rollupOptions: { input: { index: resolve(__dirname, 'src/renderer/index.html') } } }
   }

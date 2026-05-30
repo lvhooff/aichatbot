@@ -9,7 +9,10 @@ export class OpenAITTSAdapter implements TTSAdapter {
   private _client?: OpenAI
   private afplayProcess?: ChildProcess
 
-  constructor(private apiKey: string, private voice: string = 'alloy') {}
+  constructor(
+    private apiKey: string,
+    private voice: string = 'alloy'
+  ) {}
 
   private get client(): OpenAI {
     if (!this._client) {
@@ -25,7 +28,7 @@ export class OpenAITTSAdapter implements TTSAdapter {
       model: 'tts-1',
       voice: this.voice as 'alloy',
       input: text,
-      response_format: 'mp3',
+      response_format: 'mp3'
     })
 
     const buffer = Buffer.from(await response.arrayBuffer())

@@ -27,10 +27,7 @@ describe('OpenAIAdapter', () => {
 
   it('streams tokens and returns full text', async () => {
     const tokens: string[] = []
-    const result = await adapter.chat(
-      [{ role: 'user', content: 'hello' }],
-      (t) => tokens.push(t)
-    )
+    const result = await adapter.chat([{ role: 'user', content: 'hello' }], (t) => tokens.push(t))
     expect(tokens).toEqual(['Hi', ' there'])
     expect(result).toBe('Hi there')
   })

@@ -5,7 +5,10 @@ export class ClaudeAdapter implements LLMAdapter {
   private _client?: Anthropic
   private abortController?: AbortController
 
-  constructor(private apiKey: string, private model: string) {}
+  constructor(
+    private apiKey: string,
+    private model: string
+  ) {}
 
   private get client(): Anthropic {
     if (!this._client) {

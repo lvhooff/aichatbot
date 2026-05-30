@@ -17,8 +17,8 @@ function createWindow(): BrowserWindow {
     minHeight: 500,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-    },
+      sandbox: false
+    }
   })
 
   win.on('ready-to-show', () => win.show())
@@ -61,15 +61,15 @@ app.whenReady().then(() => {
     "worker-src blob: 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
-    connectSrc,
+    connectSrc
   ].join('; ')
 
   win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [csp],
-      },
+        'Content-Security-Policy': [csp]
+      }
     })
   })
 

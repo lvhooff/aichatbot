@@ -5,7 +5,10 @@ export class OpenAIAdapter implements LLMAdapter {
   private _client?: OpenAI
   private abortController?: AbortController
 
-  constructor(private apiKey: string, private model: string) {}
+  constructor(
+    private apiKey: string,
+    private model: string
+  ) {}
 
   private get client(): OpenAI {
     if (!this._client) {

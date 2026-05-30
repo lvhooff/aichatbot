@@ -91,7 +91,7 @@ exit(exitCode)
 const CANDIDATE_DEVELOPER_DIRS = [
   '/Library/Developer/CommandLineTools',
   undefined, // current xcode-select default
-  '/Applications/Xcode.app/Contents/Developer',
+  '/Applications/Xcode.app/Contents/Developer'
 ]
 
 function probeToolchain(developerDir?: string): string | undefined {
@@ -102,7 +102,10 @@ function probeToolchain(developerDir?: string): string | undefined {
     const major = m ? Number(m[1]) : 0
     const minor = m ? Number(m[2]) : 0
     if (major < 6 || (major === 6 && minor < 2)) return undefined
-    const sdk = execFileSync('xcrun', ['--sdk', 'macosx', '--show-sdk-version'], { env, encoding: 'utf8' }).trim()
+    const sdk = execFileSync('xcrun', ['--sdk', 'macosx', '--show-sdk-version'], {
+      env,
+      encoding: 'utf8'
+    }).trim()
     if (Number(sdk.split('.')[0]) < 26) return undefined
     return developerDir ?? ''
   } catch {
@@ -159,7 +162,19 @@ export function ensureBinary(cacheDir: string): string {
   writeFileSync(srcPath, SWIFT_SOURCE)
   execFileSync(
     'xcrun',
-    ['swiftc', '-O', '-framework', 'Speech', '-framework', 'AVFoundation', '-framework', 'Foundation', srcPath, '-o', binPath],
+    [
+      'swiftc',
+      '-O',
+      '-framework',
+      'Speech',
+      '-framework',
+      'AVFoundation',
+      '-framework',
+      'Foundation',
+      srcPath,
+      '-o',
+      binPath
+    ],
     { env: toolchainEnv(), encoding: 'utf8' }
   )
   writeFileSync(stampPath, hash)
@@ -174,11 +189,17 @@ export async function transcribeBuffer(
 ): Promise<string> {
   const binPath = ensureBinary(cacheDir)
   const ext = mimeType.split('/')[1]?.split(';')[0] ?? 'wav'
-  const audioPath = join(tmpdir(), `aichatbot-stt-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`)
+  const audioPath = join(
+    tmpdir(),
+    `aichatbot-stt-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  )
   writeFileSync(audioPath, audioBuffer)
   try {
     // First run may download the on-device model, so allow a generous timeout.
-    const { stdout } = await execFileAsync(binPath, [audioPath], { timeout: 120_000, maxBuffer: 4 * 1024 * 1024 })
+    const { stdout } = await execFileAsync(binPath, [audioPath], {
+      timeout: 120_000,
+      maxBuffer: 4 * 1024 * 1024
+    })
     return stdout.trim()
   } finally {
     rmSync(audioPath, { force: true })
