@@ -10,12 +10,12 @@ export interface LLMSettings {
 }
 
 export interface STTSettings {
-  provider: 'whisper-api' | 'macos' | 'whisper-local' | 'none'
+  provider: 'whisper-api' | 'macos' | 'none'
   apiKey: string
 }
 
 export interface TTSSettings {
-  provider: 'macos-say' | 'openai-tts' | 'elevenlabs' | 'none'
+  provider: 'macos-say' | 'openai-tts' | 'none'
   apiKey: string
   voice?: string
 }
@@ -31,7 +31,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   llm: { provider: 'claude', model: 'claude-sonnet-4-6', apiKey: '' },
   stt: { provider: 'whisper-api', apiKey: '' },
   tts: { provider: 'macos-say', apiKey: '' },
-  conversationWindowSize: 10,
+  conversationWindowSize: 10
 }
 
 export class SettingsManager {
@@ -53,7 +53,7 @@ export class SettingsManager {
         ...saved,
         llm: { ...DEFAULT_SETTINGS.llm, ...saved.llm },
         stt: { ...DEFAULT_SETTINGS.stt, ...saved.stt },
-        tts: { ...DEFAULT_SETTINGS.tts, ...saved.tts },
+        tts: { ...DEFAULT_SETTINGS.tts, ...saved.tts }
       }
     } catch {
       return structuredClone(DEFAULT_SETTINGS)

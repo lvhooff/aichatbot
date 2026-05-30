@@ -31,7 +31,7 @@ export function TextInput({ onSubmit, disabled }: Props) {
         gap: 8,
         alignItems: 'flex-end',
         padding: '10px 16px',
-        borderTop: '1px solid #e0e0e0',
+        borderTop: '1px solid rgba(255,255,255,0.1)'
       }}
     >
       <textarea
@@ -50,7 +50,7 @@ export function TextInput({ onSubmit, disabled }: Props) {
           borderRadius: 8,
           border: '1px solid #ccc',
           maxHeight: 120,
-          minHeight: 38,
+          minHeight: 38
         }}
       />
       <button
@@ -63,7 +63,7 @@ export function TextInput({ onSubmit, disabled }: Props) {
           color: '#fff',
           border: 'none',
           cursor: disabled || !text.trim() ? 'default' : 'pointer',
-          fontSize: 14,
+          fontSize: 14
         }}
       >
         Send

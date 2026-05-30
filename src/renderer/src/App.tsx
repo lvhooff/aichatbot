@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   llm: { provider: 'claude', model: 'claude-sonnet-4-6', apiKey: '' },
   stt: { provider: 'whisper-api', apiKey: '' },
   tts: { provider: 'macos-say', apiKey: '' },
-  conversationWindowSize: 10,
+  conversationWindowSize: 10
 }
 
 export default function App() {
@@ -20,7 +20,15 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
+  const [notice, setNotice] = useState<string | null>(null)
   const conversationRef = useRef<Message[]>([])
+
+  // Auto-dismiss transient notices (e.g. TTS playback failures).
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 5000)
+    return () => clearTimeout(t)
+  }, [notice])
 
   const textMode = settings.stt.provider === 'none'
 
@@ -36,10 +44,7 @@ export default function App() {
     setMessages((prev) => {
       const last = prev[prev.length - 1]
       if (!last || last.role !== 'assistant') return prev
-      return [
-        ...prev.slice(0, -1),
-        { ...last, content: last.content + token, isStreaming: !done },
-      ]
+      return [...prev.slice(0, -1), { ...last, content: last.content + token, isStreaming: !done }]
     })
   }, [])
 
@@ -55,7 +60,7 @@ export default function App() {
         addMessage({ id: crypto.randomUUID(), role: 'user', content })
         conversationRef.current = [
           ...conversationRef.current,
-          { role: 'user' as const, content },
+          { role: 'user' as const, content }
         ].slice(-(settings.conversationWindowSize * 2))
 
         addMessage({ id: crypto.randomUUID(), role: 'assistant', content: '', isStreaming: true })
@@ -79,8 +84,8 @@ export default function App() {
                 ...last,
                 content: `Error: ${(err as Error).message}`,
                 isError: true,
-                isStreaming: false,
-              },
+                isStreaming: false
+              }
             ]
           })
           removeListener()
@@ -93,14 +98,15 @@ export default function App() {
         if (fullResponse.trim()) {
           conversationRef.current = [
             ...conversationRef.current,
-            { role: 'assistant' as const, content: fullResponse },
+            { role: 'assistant' as const, content: fullResponse }
           ].slice(-(settings.conversationWindowSize * 2))
 
           setIsPlaying(true)
           try {
             await window.api.speak(fullResponse)
           } catch {
-            // TTS failure is silent — text already shown
+            // Text is already shown; just flag that playback didn't work.
+            setNotice('Voice playback failed — check your Text-to-Speech settings.')
           }
           setIsPlaying(false)
         }
@@ -124,12 +130,15 @@ export default function App() {
       try {
         transcript = await window.api.transcribe(audioBuffer, 'audio/wav')
       } catch (err) {
-        const detail = (err as Error)?.message?.replace(/^Error invoking remote method '[^']*':\s*/, '')
+        const detail = (err as Error)?.message?.replace(
+          /^Error invoking remote method '[^']*':\s*/,
+          ''
+        )
         addMessage({
           id: crypto.randomUUID(),
           role: 'user',
           content: detail ? `Transcription failed — ${detail}` : 'Transcription failed',
-          isError: true,
+          isError: true
         })
         return
       }
@@ -145,13 +154,31 @@ export default function App() {
     setSettingsOpen(false)
   }
 
+  const handleNewChat = useCallback(() => {
+    setMessages([])
+    conversationRef.current = []
+  }, [])
+
+  const headerButtonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'none',
+    border: '1px solid rgba(255,255,255,0.18)',
+    borderRadius: 6,
+    fontSize: 15,
+    lineHeight: 1,
+    padding: '6px 9px',
+    color: '#bbb'
+  } as const
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'system-ui, sans-serif'
       }}
     >
       <div
@@ -160,31 +187,75 @@ export default function App() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '12px 16px',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 15 }}>AI Chatbot</span>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            background: 'none',
-            border: '1px solid #ccc',
-            borderRadius: 6,
-            cursor: 'pointer',
-            fontSize: 13,
-            padding: '4px 10px',
-            color: '#555',
-          }}
-          aria-label="Settings"
-        >
-          ⚙ Settings
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{ fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            AI Chatbot
+          </span>
+          <span
+            title={`${settings.llm.provider} · ${settings.llm.model}`}
+            style={{
+              fontSize: 11,
+              color: '#888',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 10,
+              padding: '1px 8px',
+              maxWidth: 120,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {settings.llm.model}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={handleNewChat}
+            disabled={messages.length === 0}
+            style={{
+              ...headerButtonStyle,
+              cursor: messages.length === 0 ? 'default' : 'pointer',
+              opacity: messages.length === 0 ? 0.4 : 1
+            }}
+            aria-label="New chat"
+            title="New chat"
+          >
+            ＋
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            style={{ ...headerButtonStyle, cursor: 'pointer' }}
+            aria-label="Settings"
+            title="Settings"
+          >
+            ⚙
+          </button>
+        </div>
       </div>
 
-      <ChatHistory messages={messages} />
+      <ChatHistory messages={messages} textMode={textMode} />
+      {notice && (
+        <div
+          role="status"
+          onClick={() => setNotice(null)}
+          style={{
+            margin: '0 16px 8px',
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'rgba(229,62,62,0.15)',
+            border: '1px solid rgba(229,62,62,0.4)',
+            color: '#ffb4b4',
+            fontSize: 13,
+            cursor: 'pointer'
+          }}
+          title="Dismiss"
+        >
+          {notice}
+        </div>
+      )}
       {textMode ? (
         <TextInput onSubmit={sendMessage} disabled={busy} />
       ) : (
