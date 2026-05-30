@@ -13,11 +13,16 @@ interface UseVADOptions {
 export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
   const vad = useMicVAD({
     startOnLoad: true,
+    baseAssetPath: '/',
+    onnxWASMBasePath: '/',
+    ortConfig: (ort) => {
+      ort.env.wasm.wasmPaths = '/'
+    },
     // Higher threshold while TTS is playing — prevents AI voice triggering barge-in
     positiveSpeechThreshold: isPlaying ? 0.90 : 0.50,
     negativeSpeechThreshold: 0.35,
-    minSpeechMs: 240,      // ~4 frames at 60ms/frame
-    preSpeechPadMs: 60,    // ~1 frame of pre-speech padding
+    minSpeechMs: 240,
+    preSpeechPadMs: 60,
     onSpeechEnd: (audio: Float32Array) => {
       const wav = encodeWAV(audio)
       onAudioReady(wav)

@@ -45,6 +45,34 @@ app.whenReady().then(() => {
   const pipeline = new Pipeline(settingsManager.get())
   const win = createWindow()
 
+  // CSP must be delivered via HTTP headers (not a meta tag) because Chromium
+  // only honours `worker-src` from headers — the VAD blob worker needs it.
+  // Dev additionally needs `'unsafe-inline'` for Vite's React Fast Refresh
+  // preamble + HMR inline scripts; production keeps the strict policy.
+  const scriptSrc = is.dev
+    ? "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'"
+    : "script-src 'self' 'wasm-unsafe-eval'"
+  const connectSrc = is.dev
+    ? "connect-src 'self' blob: ws://localhost:* http://localhost:*"
+    : "connect-src 'self' blob:"
+  const csp = [
+    "default-src 'self'",
+    scriptSrc,
+    "worker-src blob: 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    connectSrc,
+  ].join('; ')
+
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      },
+    })
+  })
+
   win.webContents.once('did-finish-load', () => {
     registerIpcHandlers(pipeline, settingsManager, win.webContents)
   })
