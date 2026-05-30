@@ -58,7 +58,8 @@ export function TextInput({ onSubmit, disabled }: Props) {
         onClick={submit}
         disabled={disabled || !text.trim()}
         style={{
-          padding: '8px 16px',
+          height: 38,
+          padding: '0 16px',
           borderRadius: 8,
           background: disabled || !text.trim() ? '#ccc' : '#0070f3',
           color: '#fff',
