@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { ChatMessage } from '../types'
 
 interface Props {
@@ -70,7 +71,7 @@ export function ChatHistory({ messages, textMode }: Props) {
           >
             {msg.role === 'assistant' && !msg.isError ? (
               <div className="md">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               </div>
             ) : (
               msg.content

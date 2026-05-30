@@ -69,3 +69,17 @@ code {
 .md b {
   font-weight: 600;
 }
+.md table {
+  border-collapse: collapse;
+  margin: 0 0 8px;
+}
+.md th,
+.md td {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 4px 8px;
+  text-align: left;
+}
+.md th {
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.05);
+}

@@ -30,7 +30,8 @@
     "@ricky0123/vad-web": "^0.0.30",
     "ollama": "^0.6.3",
     "openai": "^6.38.0",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
