@@ -178,6 +178,7 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
+        overflow: 'hidden',
         fontFamily: 'system-ui, sans-serif'
       }}
     >
@@ -187,6 +188,7 @@ export default function App() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '12px 16px',
+          flexShrink: 0,
           borderBottom: '1px solid rgba(255,255,255,0.1)'
         }}
       >

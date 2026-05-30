@@ -31,6 +31,7 @@ export function TextInput({ onSubmit, disabled }: Props) {
         gap: 8,
         alignItems: 'flex-end',
         padding: '10px 16px',
+        flexShrink: 0,
         borderTop: '1px solid rgba(255,255,255,0.1)'
       }}
     >

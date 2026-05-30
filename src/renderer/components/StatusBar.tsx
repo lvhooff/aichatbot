@@ -23,6 +23,7 @@ export function StatusBar({ status, isPlaying }: Props) {
         alignItems: 'center',
         gap: 8,
         padding: '10px 16px',
+        flexShrink: 0,
         borderTop: '1px solid rgba(255,255,255,0.1)',
         fontSize: 13,
         color: '#bbb'

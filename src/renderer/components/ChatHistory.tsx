@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 import type { ChatMessage } from '../types'
 
 interface Props {
@@ -36,6 +37,7 @@ export function ChatHistory({ messages, textMode }: Props) {
     <div
       style={{
         flex: 1,
+        minHeight: 0,
         overflowY: 'auto',
         padding: '16px',
         display: 'flex',
@@ -66,7 +68,13 @@ export function ChatHistory({ messages, textMode }: Props) {
               lineHeight: 1.5
             }}
           >
-            {msg.content}
+            {msg.role === 'assistant' && !msg.isError ? (
+              <div className="md">
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
+            ) : (
+              msg.content
+            )}
             {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
           </div>
         </div>

@@ -43,8 +43,12 @@ ul {
   list-style: none;
 }
 
+html,
 body {
-  min-height: 100vh;
+  height: 100%;
+}
+
+body {
   color: var(--color-text);
   background: var(--color-background);
   line-height: 1.6;
