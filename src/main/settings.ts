@@ -3,19 +3,19 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
 export interface LLMSettings {
-  provider: 'claude' | 'openai' | 'ollama' | 'openrouter'
+  provider: 'claude' | 'openai' | 'ollama' | 'ollama-cloud' | 'openrouter'
   model: string
   apiKey: string
   baseUrl?: string
 }
 
 export interface STTSettings {
-  provider: 'whisper-api' | 'macos' | 'whisper-local'
+  provider: 'whisper-api' | 'macos' | 'whisper-local' | 'none'
   apiKey: string
 }
 
 export interface TTSSettings {
-  provider: 'macos-say' | 'openai-tts' | 'elevenlabs'
+  provider: 'macos-say' | 'openai-tts' | 'elevenlabs' | 'none'
   apiKey: string
   voice?: string
 }

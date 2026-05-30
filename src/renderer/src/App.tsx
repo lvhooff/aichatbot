@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChatHistory } from '../components/ChatHistory'
-import { StatusBar } from '../components/StatusBar'
+import { VoiceInput } from '../components/VoiceInput'
+import { TextInput } from '../components/TextInput'
 import { SettingsPanel } from '../components/SettingsPanel'
-import { useVAD } from '../hooks/useVAD'
 import type { ChatMessage } from '../types'
 import type { AppSettings } from '../../main/settings'
 import type { Message } from '../../main/providers/llm/interface'
@@ -17,9 +17,12 @@ const DEFAULT_SETTINGS: AppSettings = {
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const conversationRef = useRef<Message[]>([])
+
+  const textMode = settings.stt.provider === 'none'
 
   useEffect(() => {
     window.api.getSettings().then(setSettings).catch(console.error)
@@ -40,6 +43,74 @@ export default function App() {
     })
   }, [])
 
+  // Shared by the voice and text paths: run a user message through the LLM and,
+  // if TTS is enabled, speak the reply. With TTS set to "none", speak() is a
+  // no-op so the reply is simply displayed as text.
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const content = text.trim()
+      if (!content) return
+      setBusy(true)
+      try {
+        addMessage({ id: crypto.randomUUID(), role: 'user', content })
+        conversationRef.current = [
+          ...conversationRef.current,
+          { role: 'user' as const, content },
+        ].slice(-(settings.conversationWindowSize * 2))
+
+        addMessage({ id: crypto.randomUUID(), role: 'assistant', content: '', isStreaming: true })
+
+        let fullResponse = ''
+        const removeListener = window.api.onLLMToken((token) => {
+          fullResponse += token
+          updateLastAssistantMessage(token)
+        })
+
+        try {
+          await window.api.chat(conversationRef.current)
+        } catch (err) {
+          updateLastAssistantMessage('', true)
+          setMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (!last || last.role !== 'assistant') return prev
+            return [
+              ...prev.slice(0, -1),
+              {
+                ...last,
+                content: `Error: ${(err as Error).message}`,
+                isError: true,
+                isStreaming: false,
+              },
+            ]
+          })
+          removeListener()
+          return
+        }
+
+        removeListener()
+        updateLastAssistantMessage('', true)
+
+        if (fullResponse.trim()) {
+          conversationRef.current = [
+            ...conversationRef.current,
+            { role: 'assistant' as const, content: fullResponse },
+          ].slice(-(settings.conversationWindowSize * 2))
+
+          setIsPlaying(true)
+          try {
+            await window.api.speak(fullResponse)
+          } catch {
+            // TTS failure is silent — text already shown
+          }
+          setIsPlaying(false)
+        }
+      } finally {
+        setBusy(false)
+      }
+    },
+    [settings.conversationWindowSize, addMessage, updateLastAssistantMessage]
+  )
+
   const handleAudioReady = useCallback(
     async (audioBuffer: ArrayBuffer) => {
       // Barge-in: if TTS is playing, stop it before transcribing
@@ -49,80 +120,24 @@ export default function App() {
         setIsPlaying(false)
       }
 
-      const userMsgId = crypto.randomUUID()
       let transcript = ''
-
       try {
         transcript = await window.api.transcribe(audioBuffer, 'audio/wav')
       } catch (err) {
-        addMessage({ id: userMsgId, role: 'user', content: 'Transcription failed', isError: true })
-        return
-      }
-
-      if (!transcript.trim()) return
-
-      addMessage({ id: userMsgId, role: 'user', content: transcript })
-      conversationRef.current = [
-        ...conversationRef.current,
-        { role: 'user' as const, content: transcript },
-      ].slice(-(settings.conversationWindowSize * 2))
-
-      const assistantMsgId = crypto.randomUUID()
-      addMessage({ id: assistantMsgId, role: 'assistant', content: '', isStreaming: true })
-
-      let fullResponse = ''
-      const removeListener = window.api.onLLMToken((token) => {
-        fullResponse += token
-        updateLastAssistantMessage(token)
-      })
-
-      try {
-        await window.api.chat(conversationRef.current)
-      } catch (err) {
-        updateLastAssistantMessage('', true)
-        setMessages((prev) => {
-          const last = prev[prev.length - 1]
-          if (!last || last.role !== 'assistant') return prev
-          return [
-            ...prev.slice(0, -1),
-            {
-              ...last,
-              content: `Error: ${(err as Error).message}`,
-              isError: true,
-              isStreaming: false,
-            },
-          ]
+        const detail = (err as Error)?.message?.replace(/^Error invoking remote method '[^']*':\s*/, '')
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'user',
+          content: detail ? `Transcription failed — ${detail}` : 'Transcription failed',
+          isError: true,
         })
-        removeListener()
         return
       }
 
-      removeListener()
-      updateLastAssistantMessage('', true)
-
-      if (fullResponse.trim()) {
-        conversationRef.current = [
-          ...conversationRef.current,
-          { role: 'assistant' as const, content: fullResponse },
-        ].slice(-(settings.conversationWindowSize * 2))
-
-        setIsPlaying(true)
-        try {
-          await window.api.speak(fullResponse)
-        } catch {
-          // TTS failure is silent — text already shown
-        }
-        setIsPlaying(false)
-      }
+      await sendMessage(transcript)
     },
-    [isPlaying, settings.conversationWindowSize, addMessage, updateLastAssistantMessage]
+    [isPlaying, sendMessage, addMessage]
   )
-
-  const { status } = useVAD({
-    isPlaying,
-    onAudioReady: handleAudioReady,
-    onError: (err) => console.error('VAD error:', err),
-  })
 
   async function handleSaveSettings(newSettings: AppSettings) {
     await window.api.saveSettings(newSettings)
@@ -170,7 +185,11 @@ export default function App() {
       </div>
 
       <ChatHistory messages={messages} />
-      <StatusBar status={status} isPlaying={isPlaying} />
+      {textMode ? (
+        <TextInput onSubmit={sendMessage} disabled={busy} />
+      ) : (
+        <VoiceInput isPlaying={isPlaying} onAudioReady={handleAudioReady} />
+      )}
 
       {settingsOpen && (
         <SettingsPanel

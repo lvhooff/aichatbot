@@ -1,6 +1,38 @@
 import { useState } from 'react'
 import type { AppSettings } from '../../main/settings'
 
+type LLMProvider = AppSettings['llm']['provider']
+
+// Suggested models per provider. The dropdown also allows a custom value, so
+// these are convenient starting points rather than an exhaustive list.
+const LLM_MODEL_PRESETS: Record<LLMProvider, string[]> = {
+  claude: [
+    'claude-opus-4-8',
+    'claude-sonnet-4-6',
+    'claude-haiku-4-5-20251001',
+    'claude-sonnet-4-5',
+    'claude-opus-4-1-20250805',
+  ],
+  openai: ['gpt-5', 'gpt-5-mini', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'],
+  openrouter: [
+    'anthropic/claude-sonnet-4.6',
+    'anthropic/claude-opus-4.8',
+    'openai/gpt-5',
+    'google/gemini-2.5-pro',
+    'meta-llama/llama-3.3-70b-instruct',
+  ],
+  ollama: ['llama3.2', 'llama3.1', 'qwen2.5', 'gemma3', 'mistral'],
+  'ollama-cloud': [
+    'gpt-oss:120b',
+    'gpt-oss:20b',
+    'deepseek-v3.1:671b',
+    'qwen3-coder:480b',
+    'kimi-k2:1t',
+  ],
+}
+
+const CUSTOM_MODEL = '__custom__'
+
 interface Props {
   settings: AppSettings
   onSave: (settings: AppSettings) => void
@@ -14,6 +46,9 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
     setDraft((prev) => ({ ...prev, [section]: { ...prev[section], ...updates } }))
   }
 
+  const modelPresets = LLM_MODEL_PRESETS[draft.llm.provider]
+  const modelIsCustom = !modelPresets.includes(draft.llm.model)
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
       <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: 360, maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -22,18 +57,53 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>LLM</p>
           <label htmlFor="llm-provider" style={{ fontSize: 13 }}>LLM Provider</label>
-          <select id="llm-provider" value={draft.llm.provider} onChange={(e) => set('llm', { provider: e.target.value as AppSettings['llm']['provider'] })}>
+          <select
+            id="llm-provider"
+            value={draft.llm.provider}
+            onChange={(e) => {
+              const provider = e.target.value as LLMProvider
+              // Reset the model to a valid default for the new provider.
+              set('llm', { provider, model: LLM_MODEL_PRESETS[provider][0] })
+            }}
+          >
             <option value="claude">Claude (Anthropic)</option>
             <option value="openai">OpenAI GPT</option>
             <option value="openrouter">OpenRouter</option>
             <option value="ollama">Ollama (local)</option>
+            <option value="ollama-cloud">Ollama (cloud)</option>
           </select>
+
           <label htmlFor="llm-model" style={{ fontSize: 13 }}>Model</label>
-          <input id="llm-model" value={draft.llm.model} onChange={(e) => set('llm', { model: e.target.value })} placeholder={draft.llm.provider === 'openrouter' ? 'e.g. anthropic/claude-opus-4' : 'e.g. claude-sonnet-4-6'} />
+          <select
+            id="llm-model"
+            value={modelIsCustom ? CUSTOM_MODEL : draft.llm.model}
+            onChange={(e) => set('llm', { model: e.target.value === CUSTOM_MODEL ? '' : e.target.value })}
+          >
+            {modelPresets.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+            <option value={CUSTOM_MODEL}>Custom…</option>
+          </select>
+          {modelIsCustom && (
+            <input
+              id="llm-model-custom"
+              value={draft.llm.model}
+              onChange={(e) => set('llm', { model: e.target.value })}
+              placeholder={draft.llm.provider === 'openrouter' ? 'e.g. anthropic/claude-opus-4.8' : 'e.g. model name'}
+              autoFocus
+            />
+          )}
+
           {draft.llm.provider !== 'ollama' && (
             <>
               <label htmlFor="llm-key" style={{ fontSize: 13 }}>API Key</label>
-              <input id="llm-key" type="password" value={draft.llm.apiKey} onChange={(e) => set('llm', { apiKey: e.target.value })} placeholder="sk-..." />
+              <input
+                id="llm-key"
+                type="password"
+                value={draft.llm.apiKey}
+                onChange={(e) => set('llm', { apiKey: e.target.value })}
+                placeholder={draft.llm.provider === 'ollama-cloud' ? 'Ollama Cloud API key' : 'sk-...'}
+              />
             </>
           )}
           {draft.llm.provider === 'ollama' && (
@@ -49,7 +119,8 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
           <label htmlFor="stt-provider" style={{ fontSize: 13 }}>STT Provider</label>
           <select id="stt-provider" value={draft.stt.provider} onChange={(e) => set('stt', { provider: e.target.value as AppSettings['stt']['provider'] })}>
             <option value="whisper-api">OpenAI Whisper API</option>
-            <option value="macos">macOS (not yet implemented)</option>
+            <option value="macos">macOS (on-device, free)</option>
+            <option value="none">None (type messages)</option>
           </select>
           {draft.stt.provider === 'whisper-api' && (
             <>
@@ -65,6 +136,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
           <select id="tts-provider" value={draft.tts.provider} onChange={(e) => set('tts', { provider: e.target.value as AppSettings['tts']['provider'] })}>
             <option value="macos-say">macOS say (free)</option>
             <option value="openai-tts">OpenAI TTS</option>
+            <option value="none">None (text only)</option>
           </select>
           {draft.tts.provider === 'openai-tts' && (
             <>

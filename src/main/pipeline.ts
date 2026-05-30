@@ -4,17 +4,20 @@ import type { LLMAdapter, Message } from './providers/llm/interface'
 import type { TTSAdapter } from './providers/tts/interface'
 import { WhisperAPIAdapter } from './providers/stt/whisper-api'
 import { MacOSSTTAdapter } from './providers/stt/macos'
+import { NoneSTTAdapter } from './providers/stt/none'
 import { ClaudeAdapter } from './providers/llm/claude'
 import { OpenAIAdapter } from './providers/llm/openai'
 import { OllamaAdapter } from './providers/llm/ollama'
 import { OpenRouterAdapter } from './providers/llm/openrouter'
 import { MacOSSayAdapter } from './providers/tts/macos-say'
 import { OpenAITTSAdapter } from './providers/tts/openai-tts'
+import { NoneTTSAdapter } from './providers/tts/none'
 
 function createSTTAdapter(settings: AppSettings['stt']): STTAdapter {
   switch (settings.provider) {
     case 'whisper-api': return new WhisperAPIAdapter(settings.apiKey)
     case 'macos': return new MacOSSTTAdapter()
+    case 'none': return new NoneSTTAdapter()
     default: throw new Error(`Unknown STT provider: ${settings.provider}`)
   }
 }
@@ -23,7 +26,8 @@ function createLLMAdapter(settings: AppSettings['llm']): LLMAdapter {
   switch (settings.provider) {
     case 'claude': return new ClaudeAdapter(settings.apiKey, settings.model)
     case 'openai': return new OpenAIAdapter(settings.apiKey, settings.model)
-    case 'ollama': return new OllamaAdapter(settings.model, settings.baseUrl)
+    case 'ollama': return new OllamaAdapter(settings.model, { baseUrl: settings.baseUrl })
+    case 'ollama-cloud': return new OllamaAdapter(settings.model, { baseUrl: settings.baseUrl, apiKey: settings.apiKey, cloud: true })
     case 'openrouter': return new OpenRouterAdapter(settings.apiKey, settings.model)
     default: throw new Error(`Unknown LLM provider: ${settings.provider}`)
   }
@@ -33,6 +37,7 @@ function createTTSAdapter(settings: AppSettings['tts']): TTSAdapter {
   switch (settings.provider) {
     case 'macos-say': return new MacOSSayAdapter()
     case 'openai-tts': return new OpenAITTSAdapter(settings.apiKey, settings.voice)
+    case 'none': return new NoneTTSAdapter()
     default: throw new Error(`Unknown TTS provider: ${settings.provider}`)
   }
 }
