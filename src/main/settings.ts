@@ -1,38 +1,15 @@
 import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import {
+  DEFAULT_SETTINGS,
+  type AppSettings,
+  type STTSettings,
+  type TTSSettings
+} from './settings-defaults'
 
-export interface LLMSettings {
-  provider: 'claude' | 'openai' | 'ollama' | 'ollama-cloud' | 'openrouter'
-  model: string
-  apiKey: string
-  baseUrl?: string
-}
-
-export interface STTSettings {
-  provider: 'whisper-api' | 'macos' | 'none'
-  apiKey: string
-}
-
-export interface TTSSettings {
-  provider: 'macos-say' | 'openai-tts' | 'none'
-  apiKey: string
-  voice?: string
-}
-
-export interface AppSettings {
-  llm: LLMSettings
-  stt: STTSettings
-  tts: TTSSettings
-  conversationWindowSize: number
-}
-
-export const DEFAULT_SETTINGS: AppSettings = {
-  llm: { provider: 'claude', model: 'claude-sonnet-4-6', apiKey: '' },
-  stt: { provider: 'whisper-api', apiKey: '' },
-  tts: { provider: 'macos-say', apiKey: '' },
-  conversationWindowSize: 10
-}
+export type { LLMSettings, STTSettings, TTSSettings, AppSettings } from './settings-defaults'
+export { DEFAULT_SETTINGS } from './settings-defaults'
 
 export class SettingsManager {
   private settings: AppSettings
@@ -48,12 +25,26 @@ export class SettingsManager {
     if (!existsSync(this.filePath)) return structuredClone(DEFAULT_SETTINGS)
     try {
       const saved = JSON.parse(readFileSync(this.filePath, 'utf-8'))
+      // Coerce unknown provider strings (e.g. 'whisper-local', 'elevenlabs' from
+      // older versions) back to a valid value so the Pipeline switch never throws.
+      const sttProvider: STTSettings['provider'] =
+        saved.stt?.provider === 'whisper-api' ||
+        saved.stt?.provider === 'macos' ||
+        saved.stt?.provider === 'none'
+          ? saved.stt.provider
+          : DEFAULT_SETTINGS.stt.provider
+      const ttsProvider: TTSSettings['provider'] =
+        saved.tts?.provider === 'macos-say' ||
+        saved.tts?.provider === 'openai-tts' ||
+        saved.tts?.provider === 'none'
+          ? saved.tts.provider
+          : DEFAULT_SETTINGS.tts.provider
       return {
         ...DEFAULT_SETTINGS,
         ...saved,
         llm: { ...DEFAULT_SETTINGS.llm, ...saved.llm },
-        stt: { ...DEFAULT_SETTINGS.stt, ...saved.stt },
-        tts: { ...DEFAULT_SETTINGS.tts, ...saved.tts }
+        stt: { ...DEFAULT_SETTINGS.stt, ...saved.stt, provider: sttProvider },
+        tts: { ...DEFAULT_SETTINGS.tts, ...saved.tts, provider: ttsProvider }
       }
     } catch {
       return structuredClone(DEFAULT_SETTINGS)

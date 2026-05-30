@@ -22,7 +22,7 @@ export class OllamaAdapter implements LLMAdapter {
     options: OllamaOptions = {}
   ) {
     this.cloud = options.cloud ?? false
-    this.host = options.baseUrl ?? (this.cloud ? OLLAMA_CLOUD_HOST : 'http://localhost:11434')
+    this.host = options.baseUrl || (this.cloud ? OLLAMA_CLOUD_HOST : 'http://localhost:11434')
     this._apiKey = options.apiKey
   }
 

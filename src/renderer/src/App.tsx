@@ -4,15 +4,9 @@ import { VoiceInput } from '../components/VoiceInput'
 import { TextInput } from '../components/TextInput'
 import { SettingsPanel } from '../components/SettingsPanel'
 import type { ChatMessage } from '../types'
+import { DEFAULT_SETTINGS } from '../../main/settings-defaults'
 import type { AppSettings } from '../../main/settings'
 import type { Message } from '../../main/providers/llm/interface'
-
-const DEFAULT_SETTINGS: AppSettings = {
-  llm: { provider: 'claude', model: 'claude-sonnet-4-6', apiKey: '' },
-  stt: { provider: 'whisper-api', apiKey: '' },
-  tts: { provider: 'macos-say', apiKey: '' },
-  conversationWindowSize: 10
-}
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -54,7 +48,7 @@ export default function App() {
   const sendMessage = useCallback(
     async (text: string) => {
       const content = text.trim()
-      if (!content) return
+      if (!content || busy) return
       setBusy(true)
       try {
         addMessage({ id: crypto.randomUUID(), role: 'user', content })
@@ -95,12 +89,15 @@ export default function App() {
         removeListener()
         updateLastAssistantMessage('', true)
 
-        if (fullResponse.trim()) {
-          conversationRef.current = [
-            ...conversationRef.current,
-            { role: 'assistant' as const, content: fullResponse }
-          ].slice(-(settings.conversationWindowSize * 2))
+        // Always record the assistant turn so the conversation context stays
+        // role-alternating — Claude rejects histories where a user message has
+        // no paired assistant reply.
+        conversationRef.current = [
+          ...conversationRef.current,
+          { role: 'assistant' as const, content: fullResponse }
+        ].slice(-(settings.conversationWindowSize * 2))
 
+        if (fullResponse.trim()) {
           setIsPlaying(true)
           try {
             await window.api.speak(fullResponse)
@@ -114,15 +111,21 @@ export default function App() {
         setBusy(false)
       }
     },
-    [settings.conversationWindowSize, addMessage, updateLastAssistantMessage]
+    [busy, settings.conversationWindowSize, addMessage, updateLastAssistantMessage]
   )
 
   const handleAudioReady = useCallback(
     async (audioBuffer: ArrayBuffer) => {
-      // Barge-in: if TTS is playing, stop it before transcribing
+      // Barge-in: if TTS is playing, stop it before transcribing.
+      // Best-effort — if the IPC call fails we still clear isPlaying so voice
+      // input doesn't stay permanently locked.
       if (isPlaying) {
-        await window.api.stopSpeaking()
-        await window.api.cancelLLM()
+        try {
+          await window.api.stopSpeaking()
+          await window.api.cancelLLM()
+        } catch {
+          // ignore — continue to transcribe regardless
+        }
         setIsPlaying(false)
       }
 

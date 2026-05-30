@@ -65,12 +65,15 @@ app.whenReady().then(() => {
   ].join('; ')
 
   win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [csp]
-      }
-    })
+    // Remove any existing CSP entry regardless of header-name casing (Electron
+    // normalises keys to lowercase, but spread + new key would produce two
+    // separate entries with different casing and let Chromium intersect them).
+    const headers = { ...details.responseHeaders }
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === 'content-security-policy') delete headers[key]
+    }
+    headers['Content-Security-Policy'] = [csp]
+    callback({ responseHeaders: headers })
   })
 
   win.webContents.once('did-finish-load', () => {

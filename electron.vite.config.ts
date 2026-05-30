@@ -20,7 +20,12 @@ function serveOrtWorkerAssets(): Plugin {
         const url = (req.url ?? '').split('?')[0]
         if (/^\/ort-wasm-[\w.-]+\.mjs$/.test(url)) {
           res.setHeader('Content-Type', 'text/javascript')
-          createReadStream(resolve(publicDir, '.' + url)).pipe(res)
+          const stream = createReadStream(resolve(publicDir, '.' + url))
+          stream.on('error', () => {
+            res.statusCode = 404
+            res.end()
+          })
+          stream.pipe(res)
           return
         }
         next()
