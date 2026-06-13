@@ -37,9 +37,30 @@ function TypingIndicator() {
 
 export function ChatHistory({ messages, textMode }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const stickToBottom = useRef(true)
+  const lastScrollTop = useRef(0)
+
+  // Decide whether to keep following the bottom of the stream. Programmatic
+  // auto-scroll only ever moves *down*, so a decrease in scrollTop means the
+  // user deliberately scrolled up to read — in that case we stop following.
+  // Returning to the bottom re-engages following.
+  const handleScroll = () => {
+    const el = containerRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (el.scrollTop < lastScrollTop.current - 1) {
+      stickToBottom.current = false
+    } else if (distanceFromBottom < 40) {
+      stickToBottom.current = true
+    }
+    lastScrollTop.current = el.scrollTop
+  }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView?.({ behavior: 'smooth' })
+    if (stickToBottom.current) {
+      bottomRef.current?.scrollIntoView?.({ behavior: 'smooth' })
+    }
   }, [messages])
 
   if (messages.length === 0) {
@@ -63,6 +84,8 @@ export function ChatHistory({ messages, textMode }: Props) {
 
   return (
     <div
+      ref={containerRef}
+      onScroll={handleScroll}
       style={{
         flex: 1,
         minHeight: 0,
