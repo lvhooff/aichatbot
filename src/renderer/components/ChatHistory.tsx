@@ -8,6 +8,33 @@ interface Props {
   textMode: boolean
 }
 
+const TYPING_ANIMATION = `
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+.typing-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #888;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+`
+
+function TypingIndicator() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 4px' }}>
+      <span className="typing-dot" />
+      <span className="typing-dot" />
+      <span className="typing-dot" />
+    </div>
+  )
+}
+
 export function ChatHistory({ messages, textMode }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -46,6 +73,7 @@ export function ChatHistory({ messages, textMode }: Props) {
         gap: 12
       }}
     >
+      <style>{TYPING_ANIMATION}</style>
       {messages.map((msg) => (
         <div
           key={msg.id}
@@ -69,14 +97,16 @@ export function ChatHistory({ messages, textMode }: Props) {
               lineHeight: 1.5
             }}
           >
-            {msg.role === 'assistant' && !msg.isError ? (
+            {msg.role === 'assistant' && msg.isStreaming && msg.content === '' ? (
+              <TypingIndicator />
+            ) : msg.role === 'assistant' && !msg.isError ? (
               <div className="md">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
               </div>
             ) : (
               msg.content
             )}
-            {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
           </div>
         </div>
       ))}
