@@ -25,11 +25,25 @@ const LLM_MODEL_PRESETS: Record<LLMProvider, string[]> = {
   'ollama-cloud': [
     'gpt-oss:120b',
     'gpt-oss:20b',
-    'deepseek-v3.1:671b',
-    'qwen3-coder:480b',
-    'kimi-k2:1t'
+    'qwen3-coder-next:cloud',
+    'deepseek-v4-pro:cloud',
+    'kimi-k2.6:cloud',
+    'glm-5.1:cloud',
+    'minimax-m3:cloud'
   ]
 }
+
+// Ollama Cloud gates its larger flagship models behind a paid subscription; the
+// request still resolves but returns "this model requires a subscription". We
+// flag these so the dropdown can warn before the user picks one. gpt-oss models
+// are available on the free tier.
+const SUBSCRIPTION_MODELS = new Set<string>([
+  'deepseek-v4-pro:cloud',
+  'kimi-k2.6:cloud',
+  'glm-5.1:cloud',
+  'minimax-m3:cloud',
+  'qwen3-coder-next:cloud'
+])
 
 const CUSTOM_MODEL = '__custom__'
 
@@ -178,7 +192,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
           >
             {modelPresets.map((m) => (
               <option key={m} value={m}>
-                {m}
+                {SUBSCRIPTION_MODELS.has(m) ? `${m} — subscription` : m}
               </option>
             ))}
             <option value={CUSTOM_MODEL}>Custom…</option>

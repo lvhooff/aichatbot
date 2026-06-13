@@ -3,6 +3,7 @@ import type { VADStatus } from '../hooks/useVAD'
 interface Props {
   status: VADStatus
   isPlaying: boolean
+  onStopSpeaking?: () => void
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -12,7 +13,7 @@ const STATUS_LABELS: Record<string, string> = {
   error: 'Mic error'
 }
 
-export function StatusBar({ status, isPlaying }: Props) {
+export function StatusBar({ status, isPlaying, onStopSpeaking }: Props) {
   const label = isPlaying ? 'Speaking...' : (STATUS_LABELS[status] ?? 'Listening')
   const isActive = status === 'recording' || isPlaying
 
@@ -38,6 +39,27 @@ export function StatusBar({ status, isPlaying }: Props) {
         }}
       />
       {label}
+      {isPlaying && onStopSpeaking && (
+        <button
+          onClick={onStopSpeaking}
+          title="Stop speaking"
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: 'rgba(229,62,62,0.15)',
+            border: '1px solid rgba(229,62,62,0.4)',
+            borderRadius: 6,
+            color: '#ffb4b4',
+            fontSize: 12,
+            padding: '3px 10px',
+            cursor: 'pointer'
+          }}
+        >
+          ■ Stop
+        </button>
+      )}
     </div>
   )
 }

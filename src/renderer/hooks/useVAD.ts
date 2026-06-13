@@ -18,8 +18,7 @@ export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
     ortConfig: (ort) => {
       ort.env.wasm.wasmPaths = '/'
     },
-    // Higher threshold while TTS is playing — prevents AI voice triggering barge-in
-    positiveSpeechThreshold: isPlaying ? 0.9 : 0.5,
+    positiveSpeechThreshold: 0.5,
     negativeSpeechThreshold: 0.35,
     minSpeechMs: 240,
     preSpeechPadMs: 60,
@@ -28,6 +27,17 @@ export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
       onAudioReady(wav)
     }
   })
+
+  // Pause the VAD entirely while TTS is speaking so the mic doesn't pick up
+  // the speaker output and trigger a spurious transcription.
+  useEffect(() => {
+    if (vad.loading) return
+    if (isPlaying) {
+      vad.pause()
+    } else {
+      vad.start()
+    }
+  }, [isPlaying, vad.loading])
 
   useEffect(() => {
     if (vad.errored) {
@@ -40,7 +50,7 @@ export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
     ? 'error'
     : vad.userSpeaking
       ? 'recording'
-      : vad.loading
+      : vad.loading || isPlaying
         ? 'idle'
         : 'listening'
 

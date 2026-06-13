@@ -116,19 +116,6 @@ export default function App() {
 
   const handleAudioReady = useCallback(
     async (audioBuffer: ArrayBuffer) => {
-      // Barge-in: if TTS is playing, stop it before transcribing.
-      // Best-effort — if the IPC call fails we still clear isPlaying so voice
-      // input doesn't stay permanently locked.
-      if (isPlaying) {
-        try {
-          await window.api.stopSpeaking()
-          await window.api.cancelLLM()
-        } catch {
-          // ignore — continue to transcribe regardless
-        }
-        setIsPlaying(false)
-      }
-
       let transcript = ''
       try {
         transcript = await window.api.transcribe(audioBuffer, 'audio/wav')
@@ -148,8 +135,17 @@ export default function App() {
 
       await sendMessage(transcript)
     },
-    [isPlaying, sendMessage, addMessage]
+    [sendMessage, addMessage]
   )
+
+  const handleStopSpeaking = useCallback(async () => {
+    try {
+      await window.api.stopSpeaking()
+    } catch {
+      // ignore
+    }
+    setIsPlaying(false)
+  }, [])
 
   async function handleSaveSettings(newSettings: AppSettings) {
     await window.api.saveSettings(newSettings)
@@ -264,7 +260,11 @@ export default function App() {
       {textMode ? (
         <TextInput onSubmit={sendMessage} disabled={busy} />
       ) : (
-        <VoiceInput isPlaying={isPlaying} onAudioReady={handleAudioReady} />
+        <VoiceInput
+          isPlaying={isPlaying}
+          onAudioReady={handleAudioReady}
+          onStopSpeaking={handleStopSpeaking}
+        />
       )}
 
       {settingsOpen && (
