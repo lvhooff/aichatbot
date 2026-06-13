@@ -40,19 +40,13 @@ export class SettingsManager {
           ? saved.tts.provider
           : DEFAULT_SETTINGS.tts.provider
       const llmSaved = saved.llm ?? {}
-      // Migrate legacy single apiKey field into the per-provider map.
-      const migratedApiKeys: Partial<Record<string, string>> = { ...llmSaved.apiKeys }
-      if (llmSaved.apiKey && !migratedApiKeys[llmSaved.provider ?? DEFAULT_SETTINGS.llm.provider]) {
-        migratedApiKeys[llmSaved.provider ?? DEFAULT_SETTINGS.llm.provider] = llmSaved.apiKey
-      }
       return {
         ...DEFAULT_SETTINGS,
         ...saved,
         llm: {
           ...DEFAULT_SETTINGS.llm,
           ...llmSaved,
-          apiKeys: migratedApiKeys,
-          apiKey: undefined
+          apiKeys: { ...llmSaved.apiKeys }
         },
         stt: { ...DEFAULT_SETTINGS.stt, ...saved.stt, provider: sttProvider },
         tts: { ...DEFAULT_SETTINGS.tts, ...saved.tts, provider: ttsProvider }

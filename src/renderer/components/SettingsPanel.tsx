@@ -19,7 +19,8 @@ const LLM_MODEL_PRESETS: Record<LLMProvider, string[]> = {
     'anthropic/claude-opus-4.8',
     'openai/gpt-5',
     'google/gemini-2.5-pro',
-    'meta-llama/llama-3.3-70b-instruct'
+    'meta-llama/llama-3.3-70b-instruct',
+    'deepseek/deepseek-v4-flash'
   ],
   ollama: ['llama3.2', 'llama3.1', 'qwen2.5', 'gemma3', 'mistral'],
   'ollama-cloud': [

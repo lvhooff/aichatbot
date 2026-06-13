@@ -203,7 +203,7 @@ export default function App() {
               border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: 10,
               padding: '1px 8px',
-              maxWidth: 120,
+              maxWidth: 220,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'

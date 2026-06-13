@@ -6,8 +6,6 @@ export interface LLMSettings {
   /** Per-provider API keys — keyed by provider name so switching providers restores the correct key. */
   apiKeys: Partial<Record<LLMSettings['provider'], string>>
   baseUrl?: string
-  /** @deprecated Use apiKeys instead. Kept for backwards-compatible migration. */
-  apiKey?: string
 }
 
 export interface STTSettings {
