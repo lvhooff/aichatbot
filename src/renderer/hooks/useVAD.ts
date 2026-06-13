@@ -1,16 +1,20 @@
 import { useMicVAD } from '@ricky0123/vad-react'
 import { useEffect } from 'react'
 import { encodeWAV } from '../utils/wav'
+import { VAD_SENSITIVITY_PRESETS, type VADSensitivity } from '../../main/settings-defaults'
 
 export type VADStatus = 'idle' | 'listening' | 'recording' | 'error'
 
 interface UseVADOptions {
   isPlaying: boolean
+  sensitivity: VADSensitivity
   onAudioReady: (audioBuffer: ArrayBuffer) => void
   onError: (err: Error) => void
 }
 
-export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
+export function useVAD({ isPlaying, sensitivity, onAudioReady, onError }: UseVADOptions) {
+  const { positiveSpeechThreshold, minSpeechMs } = VAD_SENSITIVITY_PRESETS[sensitivity]
+
   const vad = useMicVAD({
     startOnLoad: true,
     baseAssetPath: '/',
@@ -18,9 +22,9 @@ export function useVAD({ isPlaying, onAudioReady, onError }: UseVADOptions) {
     ortConfig: (ort) => {
       ort.env.wasm.wasmPaths = '/'
     },
-    positiveSpeechThreshold: 0.5,
+    positiveSpeechThreshold,
     negativeSpeechThreshold: 0.35,
-    minSpeechMs: 240,
+    minSpeechMs,
     preSpeechPadMs: 60,
     onSpeechEnd: (audio: Float32Array) => {
       const wav = encodeWAV(audio)

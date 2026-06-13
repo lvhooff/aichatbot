@@ -262,6 +262,7 @@ export default function App() {
       ) : (
         <VoiceInput
           isPlaying={isPlaying}
+          sensitivity={settings.vadSensitivity}
           onAudioReady={handleAudioReady}
           onStopSpeaking={handleStopSpeaking}
         />

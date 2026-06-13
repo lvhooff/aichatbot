@@ -27,21 +27,22 @@ function createSTTAdapter(settings: AppSettings['stt']): STTAdapter {
 }
 
 function createLLMAdapter(settings: AppSettings['llm']): LLMAdapter {
+  const apiKey = settings.apiKeys[settings.provider] ?? ''
   switch (settings.provider) {
     case 'claude':
-      return new ClaudeAdapter(settings.apiKey, settings.model)
+      return new ClaudeAdapter(apiKey, settings.model)
     case 'openai':
-      return new OpenAIAdapter(settings.apiKey, settings.model)
+      return new OpenAIAdapter(apiKey, settings.model)
     case 'ollama':
       return new OllamaAdapter(settings.model, { baseUrl: settings.baseUrl })
     case 'ollama-cloud':
       return new OllamaAdapter(settings.model, {
         baseUrl: settings.baseUrl,
-        apiKey: settings.apiKey,
+        apiKey,
         cloud: true
       })
     case 'openrouter':
-      return new OpenRouterAdapter(settings.apiKey, settings.model)
+      return new OpenRouterAdapter(apiKey, settings.model)
     default:
       throw new Error(`Unknown LLM provider: ${settings.provider}`)
   }

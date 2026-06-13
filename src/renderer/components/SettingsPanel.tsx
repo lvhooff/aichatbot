@@ -40,9 +40,7 @@ const LLM_MODEL_PRESETS: Record<LLMProvider, string[]> = {
 const SUBSCRIPTION_MODELS = new Set<string>([
   'deepseek-v4-pro:cloud',
   'kimi-k2.6:cloud',
-  'glm-5.1:cloud',
-  'minimax-m3:cloud',
-  'qwen3-coder-next:cloud'
+  'glm-5.1:cloud'
 ])
 
 const CUSTOM_MODEL = '__custom__'
@@ -170,6 +168,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
             onChange={(e) => {
               const provider = e.target.value as LLMProvider
               // Reset the model to a valid default for the new provider.
+              // apiKeys map is preserved so each provider remembers its own key.
               set('llm', { provider, model: LLM_MODEL_PRESETS[provider][0] })
             }}
           >
@@ -218,8 +217,16 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
               </label>
               <SecretInput
                 id="llm-key"
-                value={draft.llm.apiKey}
-                onChange={(apiKey) => set('llm', { apiKey })}
+                value={draft.llm.apiKeys[draft.llm.provider] ?? ''}
+                onChange={(apiKey) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    llm: {
+                      ...prev.llm,
+                      apiKeys: { ...prev.llm.apiKeys, [prev.llm.provider]: apiKey }
+                    }
+                  }))
+                }
                 placeholder={
                   draft.llm.provider === 'ollama-cloud' ? 'Ollama Cloud API key' : 'sk-...'
                 }
@@ -277,6 +284,27 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
                 onChange={(apiKey) => set('stt', { apiKey })}
                 placeholder="sk-..."
               />
+            </>
+          )}
+          {draft.stt.provider !== 'none' && (
+            <>
+              <label htmlFor="vad-sensitivity" style={{ fontSize: 13 }}>
+                Mic Sensitivity
+              </label>
+              <select
+                id="vad-sensitivity"
+                value={draft.vadSensitivity}
+                onChange={(e) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    vadSensitivity: e.target.value as AppSettings['vadSensitivity']
+                  }))
+                }
+              >
+                <option value="high">High — picks up quiet or distant speech</option>
+                <option value="normal">Normal — balanced (default)</option>
+                <option value="low">Low — close mic only, ignores background voices</option>
+              </select>
             </>
           )}
         </div>
