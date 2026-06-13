@@ -6,15 +6,18 @@ export class OpenAIAdapter implements LLMAdapter {
   private abortController?: AbortController
 
   constructor(
-    private apiKey: string,
-    private model: string
+    protected apiKey: string,
+    protected model: string
   ) {}
 
+  /** Build the underlying client. Subclasses override to target a compatible API. */
+  protected createClient(): OpenAI {
+    if (!this.apiKey) throw new Error('OpenAI API key not configured — open Settings')
+    return new OpenAI({ apiKey: this.apiKey })
+  }
+
   private get client(): OpenAI {
-    if (!this._client) {
-      if (!this.apiKey) throw new Error('OpenAI API key not configured — open Settings')
-      this._client = new OpenAI({ apiKey: this.apiKey })
-    }
+    if (!this._client) this._client = this.createClient()
     return this._client
   }
 

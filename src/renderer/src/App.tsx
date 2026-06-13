@@ -9,6 +9,19 @@ import type { AppSettings } from '../../main/settings'
 import type { Message } from '../../main/providers/llm/interface'
 import { extractCompleteSentences } from '../utils/sentences'
 
+const headerButtonStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'none',
+  border: '1px solid rgba(255,255,255,0.18)',
+  borderRadius: 6,
+  fontSize: 15,
+  lineHeight: 1,
+  padding: '6px 9px',
+  color: '#bbb'
+} as const
+
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -258,19 +271,6 @@ export default function App() {
     setMessages([])
     conversationRef.current = []
   }, [])
-
-  const headerButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'none',
-    border: '1px solid rgba(255,255,255,0.18)',
-    borderRadius: 6,
-    fontSize: 15,
-    lineHeight: 1,
-    padding: '6px 9px',
-    color: '#bbb'
-  } as const
 
   return (
     <div

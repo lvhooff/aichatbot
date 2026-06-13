@@ -46,6 +46,16 @@ const SUBSCRIPTION_MODELS = new Set<string>([
 
 const CUSTOM_MODEL = '__custom__'
 
+// Bordered card wrapping each provider section (LLM / STT / TTS).
+const sectionStyle = {
+  border: '1px solid #ddd',
+  borderRadius: 8,
+  padding: 12,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8
+} as const
+
 // Password input with a reveal toggle so a pasted API key can be verified.
 function SecretInput({
   id,
@@ -149,16 +159,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
       >
         <h2 style={{ margin: 0, fontSize: 18 }}>Settings</h2>
 
-        <div
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 8,
-            padding: 12,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8
-          }}
-        >
+        <div style={sectionStyle}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>LLM</p>
           <label htmlFor="llm-provider" style={{ fontSize: 13 }}>
             LLM Provider
@@ -249,16 +250,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
           )}
         </div>
 
-        <div
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 8,
-            padding: 12,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8
-          }}
-        >
+        <div style={sectionStyle}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>Speech-to-Text</p>
           <label htmlFor="stt-provider" style={{ fontSize: 13 }}>
             STT Provider
@@ -310,16 +302,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
           )}
         </div>
 
-        <div
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 8,
-            padding: 12,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8
-          }}
-        >
+        <div style={sectionStyle}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#333' }}>Text-to-Speech</p>
           <label htmlFor="tts-provider" style={{ fontSize: 13 }}>
             TTS Provider

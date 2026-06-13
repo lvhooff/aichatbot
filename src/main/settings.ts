@@ -3,13 +3,19 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import {
   DEFAULT_SETTINGS,
-  type AppSettings,
-  type STTSettings,
-  type TTSSettings
+  STT_PROVIDERS,
+  TTS_PROVIDERS,
+  type AppSettings
 } from './settings-defaults'
 
 export type { LLMSettings, STTSettings, TTSSettings, AppSettings } from './settings-defaults'
 export { DEFAULT_SETTINGS } from './settings-defaults'
+
+// Coerce an unknown provider string (e.g. 'whisper-local' or 'elevenlabs' from an
+// older version) back to a valid value so the Pipeline switch never throws.
+function coerceProvider<T extends string>(value: unknown, valid: readonly T[], fallback: T): T {
+  return valid.includes(value as T) ? (value as T) : fallback
+}
 
 export class SettingsManager {
   private settings: AppSettings
@@ -25,20 +31,16 @@ export class SettingsManager {
     if (!existsSync(this.filePath)) return structuredClone(DEFAULT_SETTINGS)
     try {
       const saved = JSON.parse(readFileSync(this.filePath, 'utf-8'))
-      // Coerce unknown provider strings (e.g. 'whisper-local', 'elevenlabs' from
-      // older versions) back to a valid value so the Pipeline switch never throws.
-      const sttProvider: STTSettings['provider'] =
-        saved.stt?.provider === 'whisper-api' ||
-        saved.stt?.provider === 'macos' ||
-        saved.stt?.provider === 'none'
-          ? saved.stt.provider
-          : DEFAULT_SETTINGS.stt.provider
-      const ttsProvider: TTSSettings['provider'] =
-        saved.tts?.provider === 'macos-say' ||
-        saved.tts?.provider === 'openai-tts' ||
-        saved.tts?.provider === 'none'
-          ? saved.tts.provider
-          : DEFAULT_SETTINGS.tts.provider
+      const sttProvider = coerceProvider(
+        saved.stt?.provider,
+        STT_PROVIDERS,
+        DEFAULT_SETTINGS.stt.provider
+      )
+      const ttsProvider = coerceProvider(
+        saved.tts?.provider,
+        TTS_PROVIDERS,
+        DEFAULT_SETTINGS.tts.provider
+      )
       const llmSaved = saved.llm ?? {}
       return {
         ...DEFAULT_SETTINGS,

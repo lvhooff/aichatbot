@@ -1,4 +1,5 @@
 import { useState, KeyboardEvent } from 'react'
+import { StopButton } from './StopButton'
 
 interface Props {
   onSubmit: (text: string) => void
@@ -44,25 +45,7 @@ export function TextInput({ onSubmit, disabled, isPlaying, onStopSpeaking }: Pro
         >
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#e53e3e' }} />
           Speaking...
-          <button
-            onClick={onStopSpeaking}
-            title="Stop speaking"
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              background: 'rgba(229,62,62,0.15)',
-              border: '1px solid rgba(229,62,62,0.4)',
-              borderRadius: 6,
-              color: '#ffb4b4',
-              fontSize: 12,
-              padding: '3px 10px',
-              cursor: 'pointer'
-            }}
-          >
-            ■ Stop
-          </button>
+          <StopButton onClick={onStopSpeaking} />
         </div>
       )}
       <div

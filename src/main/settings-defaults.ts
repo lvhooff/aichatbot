@@ -8,13 +8,19 @@ export interface LLMSettings {
   baseUrl?: string
 }
 
+// Valid provider ids double as the runtime allow-list used to coerce unknown
+// values loaded from disk (see SettingsManager.load), so the type and the
+// validation can never drift apart.
+export const STT_PROVIDERS = ['whisper-api', 'macos', 'none'] as const
+export const TTS_PROVIDERS = ['macos-say', 'openai-tts', 'none'] as const
+
 export interface STTSettings {
-  provider: 'whisper-api' | 'macos' | 'none'
+  provider: (typeof STT_PROVIDERS)[number]
   apiKey: string
 }
 
 export interface TTSSettings {
-  provider: 'macos-say' | 'openai-tts' | 'none'
+  provider: (typeof TTS_PROVIDERS)[number]
   apiKey: string
   voice?: string
 }
