@@ -45,6 +45,10 @@ app.whenReady().then(() => {
   const pipeline = new Pipeline(settingsManager.get())
   const win = createWindow()
 
+  // TTS providers spawn child processes (`say`, `afplay`). Kill any in-flight
+  // playback on quit so audio doesn't outlive the app.
+  app.on('before-quit', () => pipeline.stopSpeaking())
+
   // CSP must be delivered via HTTP headers (not a meta tag) because Chromium
   // only honours `worker-src` from headers — the VAD blob worker needs it.
   // Dev additionally needs `'unsafe-inline'` for Vite's React Fast Refresh

@@ -14,16 +14,17 @@ A desktop application that brings conversational AI to your fingertips with seam
 🎙️ **Voice Capabilities**
 - Real-time speech-to-text transcription
 - Multiple STT providers (Whisper API, macOS Speech, none)
-- Voice activity detection (VAD) with adaptive sensitivity
-- Text-to-speech playback
+- Voice activity detection (VAD) with configurable sensitivity (High / Normal / Low)
+- Text-to-speech playback with manual stop control
 - Multiple TTS providers (OS native, OpenAI TTS, none)
-- **Barge-in support**: Speak while the bot is talking to interrupt and respond
+- Mic automatically pauses during TTS playback to prevent feedback
 
 💬 **Chat Features**
 - Persistent conversation history with sliding window
-- Streaming token responses for real-time feedback
+- Streaming token responses with animated typing indicator while waiting
 - Markdown rendering with GitHub-flavored extensions
 - Text and voice input modes
+- Per-provider API key storage (each LLM provider remembers its own key)
 - Settings persistence
 
 🎯 **Desktop-First Design**
@@ -82,6 +83,9 @@ On first run, you can configure providers via the Settings panel (⚙️ gear ic
 
 ### Provider Setup
 
+#### LLM API Keys
+Each LLM provider stores its API key independently. You can configure keys for multiple providers and switch between them freely — the correct key is restored automatically when you select a provider.
+
 #### Claude (Anthropic)
 1. Get an API key from [console.anthropic.com](https://console.anthropic.com)
 2. Select Claude as LLM provider
@@ -123,6 +127,13 @@ On first run, you can configure providers via the Settings panel (⚙️ gear ic
 #### OpenAI TTS
 1. Get an OpenAI API key
 2. Select OpenAI TTS as provider
+
+### Mic Sensitivity
+- Controls how aggressively the VAD detects speech
+- **High**: Picks up quiet or distant speech — good for quiet rooms
+- **Normal**: Balanced default
+- **Low**: Close mic only — filters out background voices, TV, etc.
+- Configurable in Settings under Speech-to-Text
 
 ### Conversation Window Size
 - Controls how many messages are sent to the LLM
@@ -260,10 +271,12 @@ interface TTSAdapter {
 
 ### Adjust Voice Activity Detection Sensitivity
 
-Edit `src/renderer/hooks/useVAD.ts`:
-- `positiveSpeechThreshold`: Sensitivity when idle (lower = more sensitive)
-- `positiveSpeechThreshold` when `isPlaying`: Threshold raised to reduce false triggers
-- `negativeSpeechThreshold`: Silence threshold
+Use the **Mic Sensitivity** dropdown in Settings (under Speech-to-Text):
+- **High** — `positiveSpeechThreshold: 0.5`, `minSpeechMs: 240` — most sensitive
+- **Normal** — `positiveSpeechThreshold: 0.65`, `minSpeechMs: 400` — default
+- **Low** — `positiveSpeechThreshold: 0.8`, `minSpeechMs: 600` — ignores background voices
+
+To add custom thresholds, edit `VAD_SENSITIVITY_PRESETS` in `src/main/settings-defaults.ts`.
 
 ### Debug Microphone Issues
 
@@ -285,7 +298,8 @@ Higher values use more tokens but maintain more context.
 - Try switching to a different STT provider
 
 ### TTS audio not playing
-- A notice will appear briefly
+- A notice will appear briefly — click it to dismiss
+- A **■ Stop** button appears in the status bar while TTS is active; click it to stop playback early
 - Check system volume
 - Verify TTS provider is configured correctly
 - Text will still be displayed even if playback fails

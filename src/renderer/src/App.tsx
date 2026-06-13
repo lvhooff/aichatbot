@@ -7,6 +7,7 @@ import type { ChatMessage } from '../types'
 import { DEFAULT_SETTINGS } from '../../main/settings-defaults'
 import type { AppSettings } from '../../main/settings'
 import type { Message } from '../../main/providers/llm/interface'
+import { extractCompleteSentences } from '../utils/sentences'
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -16,6 +17,9 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [notice, setNotice] = useState<string | null>(null)
   const conversationRef = useRef<Message[]>([])
+  // Set while a reply is streaming/speaking so the Stop button can cancel the
+  // in-flight sentence queue, not just kill the currently-playing sentence.
+  const ttsCancelRef = useRef<(() => void) | null>(null)
 
   // Auto-dismiss transient notices (e.g. TTS playback failures).
   useEffect(() => {
@@ -43,8 +47,8 @@ export default function App() {
   }, [])
 
   // Shared by the voice and text paths: run a user message through the LLM and,
-  // if TTS is enabled, speak the reply. With TTS set to "none", speak() is a
-  // no-op so the reply is simply displayed as text.
+  // if TTS is enabled, speak the reply sentence-by-sentence as tokens arrive.
+  // With TTS set to "none", speak() is a no-op so the reply is simply displayed.
   const sendMessage = useCallback(
     async (text: string) => {
       const content = text.trim()
@@ -60,9 +64,91 @@ export default function App() {
         addMessage({ id: crypto.randomUUID(), role: 'assistant', content: '', isStreaming: true })
 
         let fullResponse = ''
+
+        // --- Sentence-streaming TTS queue ---
+        // Sentences are pushed here as they complete; the drain loop speaks
+        // them one at a time so playback is continuous with no gap.
+        const sentenceQueue: string[] = []
+        let ttsActive = false
+        let ttsError = false
+        // Use an object so TypeScript doesn't narrow resolve to never
+        // when it's assigned inside the Promise constructor callback.
+        const queueDoneRef: { resolve: (() => void) | null } = { resolve: null }
+        const queueDone = new Promise<void>((res) => {
+          queueDoneRef.resolve = res
+        })
+
+        let llmDone = false
+        let tokenBuffer = ''
+        // Flipped by the Stop button. Once set, no further sentences are queued
+        // or spoken — without this the queue would keep spawning the next
+        // sentence right after Stop killed the current one.
+        let cancelled = false
+
+        const drainQueue = async (): Promise<void> => {
+          // Already draining or nothing to do — the loop below handles both.
+          if (ttsActive) return
+          ttsActive = true
+          while (!cancelled && sentenceQueue.length > 0) {
+            const sentence = sentenceQueue.shift()!
+            try {
+              await window.api.speak(sentence)
+            } catch {
+              ttsError = true
+              // Keep draining so mic isn't left paused, but flag the error.
+            }
+          }
+          ttsActive = false
+          // Resolve only when LLM is also done (llmDone flag checked externally).
+          if (llmDone) {
+            queueDoneRef.resolve?.()
+          }
+        }
+        let firstSentenceQueued = false
+
+        // Wait for any in-flight/queued TTS to finish, then clear the playing
+        // state. Call once the LLM has finished or errored. If nothing was ever
+        // spoken, or the drain loop already drained the queue, this resolves
+        // queueDone itself so the await below can't hang.
+        const settlePlayback = async (): Promise<void> => {
+          if (!firstSentenceQueued) {
+            queueDoneRef.resolve?.()
+            return
+          }
+          if (!ttsActive && sentenceQueue.length === 0) {
+            queueDoneRef.resolve?.()
+          }
+          await queueDone
+          setIsPlaying(false)
+        }
+
+        // Exposed to the Stop button: drop everything still queued and stop
+        // draining. The currently-playing sentence is killed separately via
+        // window.api.stopSpeaking() in handleStopSpeaking.
+        ttsCancelRef.current = () => {
+          cancelled = true
+          sentenceQueue.length = 0
+        }
+
         const removeListener = window.api.onLLMToken((token) => {
           fullResponse += token
+          tokenBuffer += token
           updateLastAssistantMessage(token)
+
+          // Once the user hits Stop we keep displaying text but stop speaking.
+          if (cancelled) return
+
+          // Extract any complete sentences from the buffer and queue them.
+          const { sentences, remainder } = extractCompleteSentences(tokenBuffer)
+          tokenBuffer = remainder
+          for (const sentence of sentences) {
+            if (!firstSentenceQueued) {
+              setIsPlaying(true)
+              firstSentenceQueued = true
+            }
+            sentenceQueue.push(sentence)
+            drainQueue()
+          }
         })
 
         try {
@@ -83,11 +169,16 @@ export default function App() {
             ]
           })
           removeListener()
+          llmDone = true
+          // A mid-stream error can land after TTS already started; let any
+          // in-flight speech drain and clear the playing state before bailing.
+          await settlePlayback()
           return
         }
 
         removeListener()
         updateLastAssistantMessage('', true)
+        llmDone = true
 
         // Always record the assistant turn so the conversation context stays
         // role-alternating — Claude rejects histories where a user message has
@@ -97,18 +188,25 @@ export default function App() {
           { role: 'assistant' as const, content: fullResponse }
         ].slice(-(settings.conversationWindowSize * 2))
 
-        if (fullResponse.trim()) {
-          setIsPlaying(true)
-          try {
-            await window.api.speak(fullResponse)
-          } catch {
-            // Text is already shown; just flag that playback didn't work.
-            setNotice('Voice playback failed — check your Text-to-Speech settings.')
+        // Flush any remaining partial sentence (e.g. a response that doesn't
+        // end with punctuation) as the final TTS chunk — unless the user stopped.
+        const trailing = cancelled ? '' : tokenBuffer.trim()
+        if (trailing) {
+          if (!firstSentenceQueued) {
+            setIsPlaying(true)
+            firstSentenceQueued = true
           }
-          setIsPlaying(false)
+          sentenceQueue.push(trailing)
+          drainQueue()
+        }
+
+        await settlePlayback()
+        if (ttsError) {
+          setNotice('Voice playback failed — check your Text-to-Speech settings.')
         }
       } finally {
         setBusy(false)
+        ttsCancelRef.current = null
       }
     },
     [busy, settings.conversationWindowSize, addMessage, updateLastAssistantMessage]
@@ -139,6 +237,9 @@ export default function App() {
   )
 
   const handleStopSpeaking = useCallback(async () => {
+    // Clear the renderer-side sentence queue first so draining stops, then kill
+    // the sentence that's playing right now in the main process.
+    ttsCancelRef.current?.()
     try {
       await window.api.stopSpeaking()
     } catch {
@@ -258,7 +359,12 @@ export default function App() {
         </div>
       )}
       {textMode ? (
-        <TextInput onSubmit={sendMessage} disabled={busy} />
+        <TextInput
+          onSubmit={sendMessage}
+          disabled={busy}
+          isPlaying={isPlaying}
+          onStopSpeaking={handleStopSpeaking}
+        />
       ) : (
         <VoiceInput
           isPlaying={isPlaying}
