@@ -90,4 +90,20 @@ describe('ChatHistory markdown links', () => {
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
+
+  it('keeps the link title from markdown title syntax', () => {
+    const messages: ChatMessage[] = [
+      {
+        id: '1',
+        role: 'assistant',
+        content: '[docs](https://example.com "Read the docs first")'
+      }
+    ]
+    render(<ChatHistory messages={messages} textMode={true} />)
+
+    expect(screen.getByRole('link', { name: 'docs' })).toHaveAttribute(
+      'title',
+      'Read the docs first'
+    )
+  })
 })

@@ -9,8 +9,8 @@ import { splitAtPivots } from '../utils/steering'
 // rather than navigating this window, which would hand our preload's
 // contextBridge API to whatever page loads next.
 const MARKDOWN_COMPONENTS: Components = {
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer">
+  a: ({ href, title, children }) => (
+    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   )

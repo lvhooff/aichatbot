@@ -9,6 +9,20 @@ if (is.dev) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
 
+// Shared by setWindowOpenHandler and will-navigate below: never hand an
+// untrusted URL to the OS shell dispatcher unless it's a plain http(s) link.
+// LLM replies are untrusted (prompt injection, compromised/MITM'd provider
+// responses), so a markdown link could otherwise carry an arbitrary scheme.
+function openExternalIfHttp(url: string): void {
+  let protocol: string
+  try {
+    ;({ protocol } = new URL(url))
+  } catch {
+    return
+  }
+  if (protocol === 'http:' || protocol === 'https:') shell.openExternal(url)
+}
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 420,
@@ -24,7 +38,7 @@ function createWindow(): BrowserWindow {
   win.on('ready-to-show', () => win.show())
 
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    openExternalIfHttp(details.url)
     return { action: 'deny' }
   })
 
@@ -36,7 +50,7 @@ function createWindow(): BrowserWindow {
   // instead, mirroring setWindowOpenHandler's policy.
   win.webContents.on('will-navigate', (event, url) => {
     event.preventDefault()
-    shell.openExternal(url)
+    openExternalIfHttp(url)
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
