@@ -28,6 +28,17 @@ function createWindow(): BrowserWindow {
     return { action: 'deny' }
   })
 
+  // Block top-level navigation (e.g. a link in an LLM-rendered markdown reply)
+  // from taking over this window — the preload's contextBridge API would
+  // otherwise persist into whatever page loads next. `will-navigate` never
+  // fires for our own loadURL/loadFile calls below, so this only ever
+  // intercepts navigations away from the app; send those to the OS browser
+  // instead, mirroring setWindowOpenHandler's policy.
+  win.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault()
+    shell.openExternal(url)
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {

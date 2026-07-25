@@ -73,3 +73,21 @@ describe('ChatHistory', () => {
     expect(screen.getByText(/type a message/i)).toBeInTheDocument()
   })
 })
+
+describe('ChatHistory markdown links', () => {
+  it('forces assistant links to open externally instead of navigating the window', () => {
+    const messages: ChatMessage[] = [
+      {
+        id: '1',
+        role: 'assistant',
+        content: '[click me](https://attacker.example)'
+      }
+    ]
+    render(<ChatHistory messages={messages} textMode={true} />)
+
+    const link = screen.getByRole('link', { name: 'click me' })
+    expect(link).toHaveAttribute('href', 'https://attacker.example')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+})

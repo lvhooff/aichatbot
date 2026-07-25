@@ -1,8 +1,20 @@
 import { useEffect, useRef } from 'react'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ChatMessage } from '../types'
 import { splitAtPivots } from '../utils/steering'
+
+// Assistant replies are untrusted (LLM output can be steered by prompt
+// injection into emitting arbitrary links). Force links to open externally
+// rather than navigating this window, which would hand our preload's
+// contextBridge API to whatever page loads next.
+const MARKDOWN_COMPONENTS: Components = {
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  )
+}
 
 interface Props {
   messages: ChatMessage[]
@@ -166,7 +178,9 @@ export function ChatHistory({ messages, textMode }: Props) {
                 {splitAtPivots(msg.content, msg.steers).map((part, i) => (
                   <div key={i}>
                     {part.nudgeBefore && <SteerMarker nudge={part.nudgeBefore} />}
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+                      {part.text}
+                    </ReactMarkdown>
                   </div>
                 ))}
                 {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
