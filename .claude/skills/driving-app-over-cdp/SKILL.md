@@ -16,6 +16,17 @@ IPC (LLM calls, settings) works for real since you're attached to the actual ren
 Gotchas:
 - A configured LLM provider is required for real responses; settings + API keys live in
   `~/Library/Application Support/aichatbot/settings.json`.
-- TTS defaults to macOS `say` (reads replies aloud). Silence during tests with
-  `while sleep 0.3; do pkill -x say; done`, or set TTS to `none` in Settings.
-- Stop the app with `pkill -f "electron-vite dev"`.
+- TTS defaults to macOS `say` (reads replies aloud). To keep it quiet without
+  changing behaviour, mute the output device (`osascript -e "set volume output
+  volume 0"`) and restore it after — `pkill`ing `say` instead makes every
+  sentence look like it finished playing instantly, which breaks any test that
+  depends on speech timing. Setting TTS to `none` in Settings disables it fully.
+- Stop the app with **`pkill -9 -f "aichatbot/node_modules/electron"`**.
+  `pkill -f "electron-vite dev"` only kills the dev-server wrapper: the Electron
+  app survives, keeps port 9222, and `agent-browser connect 9222` then silently
+  attaches to that stale instance — so edits and settings changes appear to have
+  no effect. After restarting, confirm exactly one instance:
+  `pgrep -f 'aichatbot/node_modules/electron/dist/Electron.app/Contents/MacOS' | wc -l`.
+- The streaming caret (`▋`) means "turn not settled", not "generation finished" —
+  it stays up while the voice works through its backlog. Watch for a stable
+  message length instead.
