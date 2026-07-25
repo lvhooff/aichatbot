@@ -5,3 +5,10 @@ out
 .eslintcache
 *.log*
 *.tsbuildinfo
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key

@@ -4,7 +4,7 @@
   "description": "An AI voice chatbot Electron application",
   "main": "./out/main/index.js",
   "author": "lvhooff",
-  "homepage": "https://electron-vite.org",
+  "homepage": "https://github.com/lvhooff/aichatbot",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
