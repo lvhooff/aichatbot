@@ -7,16 +7,40 @@ interface Props {
   /** True while TTS is speaking — surfaces a Stop control in text mode. */
   isPlaying?: boolean
   onStopSpeaking?: () => void
+  /**
+   * True while a reply is in flight. The composer becomes a steering control:
+   * what you type redirects the reply that's already running instead of queuing
+   * a new message.
+   */
+  steering?: boolean
+  onSteer?: (nudge: string) => void
 }
 
-// Text input footer, shown when STT is set to "none". Enter sends the message;
-// Shift+Enter inserts a newline.
-export function TextInput({ onSubmit, disabled, isPlaying, onStopSpeaking }: Props) {
+const STEER_ACCENT = '#7a5cc4'
+
+// Input footer, shown when STT is set to "none". Enter sends; Shift+Enter inserts
+// a newline. While a reply is streaming it switches to steering mode — same box,
+// different target.
+export function TextInput({
+  onSubmit,
+  disabled,
+  isPlaying,
+  onStopSpeaking,
+  steering,
+  onSteer
+}: Props) {
   const [text, setText] = useState('')
+  const canSteer = Boolean(steering && onSteer)
 
   function submit() {
     const trimmed = text.trim()
-    if (!trimmed || disabled) return
+    if (!trimmed) return
+    if (canSteer) {
+      onSteer!(trimmed)
+      setText('')
+      return
+    }
+    if (disabled) return
     onSubmit(trimmed)
     setText('')
   }
@@ -27,6 +51,8 @@ export function TextInput({ onSubmit, disabled, isPlaying, onStopSpeaking }: Pro
       submit()
     }
   }
+
+  const inert = canSteer ? !text.trim() : disabled || !text.trim()
 
   return (
     <>
@@ -62,9 +88,11 @@ export function TextInput({ onSubmit, disabled, isPlaying, onStopSpeaking }: Pro
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Type a message…"
+          placeholder={
+            canSteer ? 'Steer the reply — “shorter”, “skip the intro”…' : 'Type a message…'
+          }
           rows={1}
-          aria-label="Message"
+          aria-label={canSteer ? 'Steer the reply' : 'Message'}
           style={{
             flex: 1,
             resize: 'none',
@@ -72,26 +100,28 @@ export function TextInput({ onSubmit, disabled, isPlaying, onStopSpeaking }: Pro
             fontFamily: 'inherit',
             padding: '8px 10px',
             borderRadius: 8,
-            border: '1px solid #ccc',
+            border: `1px solid ${canSteer ? STEER_ACCENT : '#ccc'}`,
             maxHeight: 120,
             minHeight: 38
           }}
         />
         <button
           onClick={submit}
-          disabled={disabled || !text.trim()}
+          disabled={inert}
+          title={canSteer ? 'Redirect the reply from where it has got to' : undefined}
           style={{
             height: 38,
             padding: '0 16px',
             borderRadius: 8,
-            background: disabled || !text.trim() ? '#ccc' : '#0070f3',
+            background: inert ? '#ccc' : canSteer ? STEER_ACCENT : '#0070f3',
             color: '#fff',
             border: 'none',
-            cursor: disabled || !text.trim() ? 'default' : 'pointer',
-            fontSize: 14
+            cursor: inert ? 'default' : 'pointer',
+            fontSize: 14,
+            whiteSpace: 'nowrap'
           }}
         >
-          Send
+          {canSteer ? '⤳ Steer' : 'Send'}
         </button>
       </div>
     </>

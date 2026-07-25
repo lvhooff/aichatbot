@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ChatMessage } from '../types'
+import { splitAtPivots } from '../utils/steering'
 
 interface Props {
   messages: ChatMessage[]
@@ -24,6 +25,44 @@ const TYPING_ANIMATION = `
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 `
+
+// Marks the point where the user redirected a reply mid-flight. Everything below
+// it was generated after the steer landed; anything the model had run ahead to
+// say but never got to deliver was dropped at this line.
+function SteerMarker({ nudge }: { nudge: string }) {
+  return (
+    <div
+      title={`You steered the reply here: “${nudge}”`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        margin: '10px 0 8px',
+        fontSize: 11,
+        color: '#7a5cc4',
+        lineHeight: 1.3
+      }}
+    >
+      <span style={{ flexShrink: 0 }}>⤳</span>
+      <span
+        style={{
+          flexShrink: 0,
+          background: 'rgba(122,92,196,0.12)',
+          border: '1px solid rgba(122,92,196,0.35)',
+          borderRadius: 10,
+          padding: '1px 8px',
+          maxWidth: 260,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {nudge}
+      </span>
+      <span style={{ flex: 1, height: 1, background: 'rgba(122,92,196,0.3)' }} />
+    </div>
+  )
+}
 
 function TypingIndicator() {
   return (
@@ -124,7 +163,12 @@ export function ChatHistory({ messages, textMode }: Props) {
               <TypingIndicator />
             ) : msg.role === 'assistant' && !msg.isError ? (
               <div className="md">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                {splitAtPivots(msg.content, msg.steers).map((part, i) => (
+                  <div key={i}>
+                    {part.nudgeBefore && <SteerMarker nudge={part.nudgeBefore} />}
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
+                  </div>
+                ))}
                 {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
               </div>
             ) : (

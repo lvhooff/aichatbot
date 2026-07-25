@@ -8,6 +8,13 @@ import { DEFAULT_SETTINGS } from '../../main/settings-defaults'
 import type { AppSettings } from '../../main/settings'
 import type { Message } from '../../main/providers/llm/interface'
 import { extractCompleteSentences } from '../utils/sentences'
+import { SpeechQueue } from '../utils/speech-queue'
+import { buildSteerMessages, joinContinuation, type SteerPivot } from '../utils/steering'
+
+// How much of a steered continuation to buffer before showing it, so a word the
+// model restates from the sentence it was cut off in can be stripped once rather
+// than flashing on screen. Matches the window stripOverlap() examines.
+const LEAD_IN_CHARS = 120
 
 const headerButtonStyle = {
   display: 'flex',
@@ -51,178 +58,199 @@ export default function App() {
     setMessages((prev) => [...prev, msg])
   }, [])
 
-  const updateLastAssistantMessage = useCallback((token: string, done = false) => {
-    setMessages((prev) => {
-      const last = prev[prev.length - 1]
-      if (!last || last.role !== 'assistant') return prev
-      return [...prev.slice(0, -1), { ...last, content: last.content + token, isStreaming: !done }]
-    })
-  }, [])
+  // Held while a reply is in flight so the composer can redirect it. See
+  // utils/steering.ts for what "steering" means here.
+  const steerRef = useRef<((nudge: string) => void) | null>(null)
 
   // Shared by the voice and text paths: run a user message through the LLM and,
   // if TTS is enabled, speak the reply sentence-by-sentence as tokens arrive.
-  // With TTS set to "none", speak() is a no-op so the reply is simply displayed.
+  // With TTS set to "none", nothing is queued and the reply is simply displayed.
+  //
+  // A reply can also be *steered* while it is still in flight: the stream is
+  // abandoned, the reply is rewound to the point the user actually received, and
+  // a fresh stream continues the very same message under the new instruction.
+  // Each pass of the loop below is one such leg — the first pass is the original
+  // question, every later pass a continuation. See utils/steering.ts.
   const sendMessage = useCallback(
     async (text: string) => {
       const content = text.trim()
       if (!content || busy) return
       setBusy(true)
+
+      const speaks = settings.tts.provider !== 'none'
+      const windowLimit = settings.conversationWindowSize * 2
+
+      addMessage({ id: crypto.randomUUID(), role: 'user', content })
+      const historyWithQuestion = [
+        ...conversationRef.current,
+        { role: 'user' as const, content }
+      ].slice(-windowLimit)
+      conversationRef.current = historyWithQuestion
+
+      const replyId = crypto.randomUUID()
+      addMessage({ id: replyId, role: 'assistant', content: '', isStreaming: true })
+
+      const queue = new SpeechQueue((sentence) => window.api.speak(sentence))
+      // Text the user has already received on earlier legs, kept across steers.
+      let delivered = ''
+      const pivots: SteerPivot[] = []
+      let pendingSteer: string | null = null
+      let failure: string | null = null
+
+      const paint = (body: string, extra?: Partial<ChatMessage>): void =>
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === replyId ? { ...m, content: body, steers: [...pivots], ...extra } : m
+          )
+        )
+
+      // Lets the turn wait for a steer that may arrive after generating has
+      // finished but while the voice is still working through the backlog.
+      let notifySteer: (() => void) | null = null
+      const steerArrived = (): Promise<void> =>
+        new Promise<void>((resolve) => {
+          notifySteer = resolve
+        })
+
+      steerRef.current = (nudge: string) => {
+        if (pendingSteer) return
+        pendingSteer = nudge
+        notifySteer?.()
+        // Drop the queued lookahead, silence the sentence mid-flight, and stop
+        // paying for a generation whose replacement is about to start.
+        queue.cancel()
+        void window.api.stopSpeaking().catch(() => {})
+        void window.api.cancelLLM().catch(() => {})
+      }
+      // The Stop button only silences playback; generation is left to finish.
+      ttsCancelRef.current = () => queue.cancel()
+
+      let messagesForCall: Message[] = historyWithQuestion
+
       try {
-        addMessage({ id: crypto.randomUUID(), role: 'user', content })
-        conversationRef.current = [
-          ...conversationRef.current,
-          { role: 'user' as const, content }
-        ].slice(-(settings.conversationWindowSize * 2))
+        for (;;) {
+          let segment = ''
+          let tokenBuffer = ''
+          let queuedUpTo = delivered.length
+          // A continuation tends to restate the last words of the sentence it was
+          // cut off in, so its head is held back just long enough to strip that
+          // overlap once — rather than letting a duplicated word show up on
+          // screen and get spoken. The opening leg has nothing to overlap with.
+          let leadIn = ''
+          let leadSettled = delivered.length === 0
 
-        addMessage({ id: crypto.randomUUID(), role: 'assistant', content: '', isStreaming: true })
-
-        let fullResponse = ''
-
-        // --- Sentence-streaming TTS queue ---
-        // Sentences are pushed here as they complete; the drain loop speaks
-        // them one at a time so playback is continuous with no gap.
-        const sentenceQueue: string[] = []
-        let ttsActive = false
-        let ttsError = false
-        // Use an object so TypeScript doesn't narrow resolve to never
-        // when it's assigned inside the Promise constructor callback.
-        const queueDoneRef: { resolve: (() => void) | null } = { resolve: null }
-        const queueDone = new Promise<void>((res) => {
-          queueDoneRef.resolve = res
-        })
-
-        let llmDone = false
-        let tokenBuffer = ''
-        // Flipped by the Stop button. Once set, no further sentences are queued
-        // or spoken — without this the queue would keep spawning the next
-        // sentence right after Stop killed the current one.
-        let cancelled = false
-
-        const drainQueue = async (): Promise<void> => {
-          // Already draining or nothing to do — the loop below handles both.
-          if (ttsActive) return
-          ttsActive = true
-          while (!cancelled && sentenceQueue.length > 0) {
-            const sentence = sentenceQueue.shift()!
-            try {
-              await window.api.speak(sentence)
-            } catch {
-              ttsError = true
-              // Keep draining so mic isn't left paused, but flag the error.
+          const commit = (chunk: string): void => {
+            if (!chunk) return
+            segment += chunk
+            const full = delivered + segment
+            paint(full)
+            if (!speaks) return
+            tokenBuffer += chunk
+            const { sentences, remainder } = extractCompleteSentences(tokenBuffer)
+            tokenBuffer = remainder
+            if (sentences.length > 0) setIsPlaying(true)
+            for (const sentence of sentences) {
+              const at = full.indexOf(sentence, queuedUpTo)
+              if (at >= 0) queuedUpTo = at + sentence.length
+              queue.push(sentence, queuedUpTo)
             }
           }
-          ttsActive = false
-          // Resolve only when LLM is also done (llmDone flag checked externally).
-          if (llmDone) {
-            queueDoneRef.resolve?.()
+
+          // Release the held-back head of a continuation, overlap stripped.
+          const settleLeadIn = (): void => {
+            if (leadSettled) return
+            leadSettled = true
+            const joined = joinContinuation(delivered, leadIn)
+            leadIn = ''
+            commit(joined.slice(delivered.length))
           }
-        }
-        let firstSentenceQueued = false
 
-        // Wait for any in-flight/queued TTS to finish, then clear the playing
-        // state. Call once the LLM has finished or errored. If nothing was ever
-        // spoken, or the drain loop already drained the queue, this resolves
-        // queueDone itself so the await below can't hang.
-        const settlePlayback = async (): Promise<void> => {
-          if (!firstSentenceQueued) {
-            queueDoneRef.resolve?.()
-            return
-          }
-          if (!ttsActive && sentenceQueue.length === 0) {
-            queueDoneRef.resolve?.()
-          }
-          await queueDone
-          setIsPlaying(false)
-        }
-
-        // Exposed to the Stop button: drop everything still queued and stop
-        // draining. The currently-playing sentence is killed separately via
-        // window.api.stopSpeaking() in handleStopSpeaking.
-        ttsCancelRef.current = () => {
-          cancelled = true
-          sentenceQueue.length = 0
-        }
-
-        const removeListener = window.api.onLLMToken((token) => {
-          fullResponse += token
-          tokenBuffer += token
-          updateLastAssistantMessage(token)
-
-          // Once the user hits Stop we keep displaying text but stop speaking.
-          if (cancelled) return
-
-          // Extract any complete sentences from the buffer and queue them.
-          const { sentences, remainder } = extractCompleteSentences(tokenBuffer)
-          tokenBuffer = remainder
-          for (const sentence of sentences) {
-            if (!firstSentenceQueued) {
-              if (settings.tts.provider !== 'none') setIsPlaying(true)
-              firstSentenceQueued = true
+          const removeListener = window.api.onLLMToken((token) => {
+            if (pendingSteer) return
+            if (leadSettled) {
+              commit(token)
+              return
             }
-            sentenceQueue.push(sentence)
-            drainQueue()
-          }
-        })
-
-        try {
-          await window.api.chat(conversationRef.current)
-        } catch (err) {
-          updateLastAssistantMessage('', true)
-          setMessages((prev) => {
-            const last = prev[prev.length - 1]
-            if (!last || last.role !== 'assistant') return prev
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...last,
-                content: `Error: ${(err as Error).message}`,
-                isError: true,
-                isStreaming: false
-              }
-            ]
+            leadIn += token
+            if (leadIn.length >= LEAD_IN_CHARS) settleLeadIn()
           })
-          removeListener()
-          llmDone = true
-          // A mid-stream error can land after TTS already started; let any
-          // in-flight speech drain and clear the playing state before bailing.
-          await settlePlayback()
-          return
-        }
 
-        removeListener()
-        updateLastAssistantMessage('', true)
-        llmDone = true
-
-        // Always record the assistant turn so the conversation context stays
-        // role-alternating — Claude rejects histories where a user message has
-        // no paired assistant reply.
-        conversationRef.current = [
-          ...conversationRef.current,
-          { role: 'assistant' as const, content: fullResponse }
-        ].slice(-(settings.conversationWindowSize * 2))
-
-        // Flush any remaining partial sentence (e.g. a response that doesn't
-        // end with punctuation) as the final TTS chunk — unless the user stopped.
-        const trailing = cancelled ? '' : tokenBuffer.trim()
-        if (trailing) {
-          if (!firstSentenceQueued) {
-            if (settings.tts.provider !== 'none') setIsPlaying(true)
-            firstSentenceQueued = true
+          try {
+            await window.api.chat(messagesForCall)
+          } catch (err) {
+            // Our own steer aborts the stream, so a rejection is only a real
+            // failure when no steer is waiting to take over.
+            if (!pendingSteer) failure = (err as Error).message
+          } finally {
+            removeListener()
           }
-          sentenceQueue.push(trailing)
-          drainQueue()
+          if (failure) break
+
+          if (!pendingSteer) {
+            // Generating is done. Flush whatever never reached a sentence boundary
+            // (a reply that ends without punctuation) as the last chunk.
+            settleLeadIn()
+            const trailing = tokenBuffer.trim()
+            if (speaks && trailing) {
+              setIsPlaying(true)
+              queue.push(trailing, (delivered + segment).length)
+            }
+            // Done generating is not done talking: the voice is usually minutes
+            // behind a reply that streamed in seconds, and that gap is exactly when
+            // a listener wants to cut in. Stay open to a steer until the voice
+            // actually catches up.
+            if (speaks && !queue.idle) await Promise.race([queue.idleWait(), steerArrived()])
+            if (!pendingSteer) {
+              delivered += segment
+              break
+            }
+          }
+
+          const nudge = pendingSteer
+          pendingSteer = null
+          const full = delivered + segment
+          // Rewind to what the user actually got. While speaking, generation runs
+          // ahead of the voice, so everything past the last fully spoken sentence
+          // was never heard — it is retracted and re-generated in the new
+          // direction. On screen there is no such gap: every token has been read.
+          delivered = speaks ? full.slice(0, queue.mark) : full
+          pivots.push({ at: delivered.length, nudge })
+          paint(delivered)
+          queue.resume()
+          messagesForCall = buildSteerMessages(historyWithQuestion, delivered, nudge)
         }
 
-        await settlePlayback()
-        if (ttsError) {
-          setNotice('Voice playback failed — check your Text-to-Speech settings.')
+        // Let the voice catch up with the text before the turn is declared over.
+        if (speaks) await queue.idleWait()
+
+        if (failure) {
+          paint(delivered ? `${delivered}\n\nError: ${failure}` : `Error: ${failure}`, {
+            isStreaming: false,
+            isError: true
+          })
+        } else {
+          paint(delivered, { isStreaming: false })
         }
+
+        // Record the assistant turn so context stays role-alternating — Claude
+        // rejects a history where a user message has no paired reply. The steers
+        // are deliberately not turns of their own: the model is told only what it
+        // ended up saying. If nothing at all was delivered, the unpaired question
+        // is dropped instead.
+        conversationRef.current = delivered
+          ? [...historyWithQuestion, { role: 'assistant' as const, content: delivered }].slice(
+              -windowLimit
+            )
+          : historyWithQuestion.slice(0, -1)
       } finally {
         setBusy(false)
+        setIsPlaying(false)
+        steerRef.current = null
         ttsCancelRef.current = null
+        if (queue.errored) setNotice('Voice playback failed — check your Text-to-Speech settings.')
       }
     },
-    [busy, settings.conversationWindowSize, settings.tts.provider, addMessage, updateLastAssistantMessage]
+    [busy, settings.conversationWindowSize, settings.tts.provider, addMessage]
   )
 
   const handleAudioReady = useCallback(
@@ -248,6 +276,10 @@ export default function App() {
     },
     [sendMessage, addMessage]
   )
+
+  const handleSteer = useCallback((nudge: string) => {
+    steerRef.current?.(nudge)
+  }, [])
 
   const handleStopSpeaking = useCallback(async () => {
     // Clear the renderer-side sentence queue first so draining stops, then kill
@@ -364,14 +396,21 @@ export default function App() {
           disabled={busy}
           isPlaying={isPlaying}
           onStopSpeaking={handleStopSpeaking}
+          steering={busy}
+          onSteer={handleSteer}
         />
       ) : (
-        <VoiceInput
-          isPlaying={isPlaying}
-          sensitivity={settings.vadSensitivity}
-          onAudioReady={handleAudioReady}
-          onStopSpeaking={handleStopSpeaking}
-        />
+        <>
+          {/* Voice mode pauses the mic while the reply plays, so a steer is typed.
+              VoiceInput stays mounted either way — unmounting it releases the mic. */}
+          {busy && <TextInput onSubmit={sendMessage} disabled steering onSteer={handleSteer} />}
+          <VoiceInput
+            isPlaying={isPlaying}
+            sensitivity={settings.vadSensitivity}
+            onAudioReady={handleAudioReady}
+            onStopSpeaking={handleStopSpeaking}
+          />
+        </>
       )}
 
       {settingsOpen && (

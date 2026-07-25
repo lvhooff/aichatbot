@@ -64,6 +64,9 @@ export class OllamaAdapter implements LLMAdapter {
   }
 
   cancel(): void {
-    // Ollama streaming does not support AbortSignal; cancel is a no-op.
+    // Aborts every stream in flight on this client, which is exactly one here.
+    // Steering depends on this: without it the abandoned generation keeps
+    // billing tokens while its replacement is already streaming.
+    this._client?.abort()
   }
 }
