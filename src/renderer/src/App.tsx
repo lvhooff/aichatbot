@@ -156,7 +156,7 @@ export default function App() {
           tokenBuffer = remainder
           for (const sentence of sentences) {
             if (!firstSentenceQueued) {
-              setIsPlaying(true)
+              if (settings.tts.provider !== 'none') setIsPlaying(true)
               firstSentenceQueued = true
             }
             sentenceQueue.push(sentence)
@@ -206,7 +206,7 @@ export default function App() {
         const trailing = cancelled ? '' : tokenBuffer.trim()
         if (trailing) {
           if (!firstSentenceQueued) {
-            setIsPlaying(true)
+            if (settings.tts.provider !== 'none') setIsPlaying(true)
             firstSentenceQueued = true
           }
           sentenceQueue.push(trailing)
@@ -222,7 +222,7 @@ export default function App() {
         ttsCancelRef.current = null
       }
     },
-    [busy, settings.conversationWindowSize, addMessage, updateLastAssistantMessage]
+    [busy, settings.conversationWindowSize, settings.tts.provider, addMessage, updateLastAssistantMessage]
   )
 
   const handleAudioReady = useCallback(
