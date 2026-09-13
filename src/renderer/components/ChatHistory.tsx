@@ -148,49 +148,80 @@ export function ChatHistory({ messages, textMode }: Props) {
       }}
     >
       <style>{TYPING_ANIMATION}</style>
-      {messages.map((msg) => (
-        <div
-          key={msg.id}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
-          }}
-        >
-          <span style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>
-            {msg.role === 'user' ? 'You' : 'AI'}
-          </span>
+      {messages.map((msg) => {
+        // Suppress the speaker bubble entirely for a message that never got any
+        // content of its own (e.g. a transcription failure) — only the error
+        // block below renders, so nothing is misattributed to "You" or "AI".
+        const hasContent = msg.content !== '' || msg.isStreaming
+        return (
           <div
+            key={msg.id}
             style={{
-              maxWidth: '80%',
-              padding: '8px 12px',
-              borderRadius: 12,
-              background: msg.isError ? '#fee' : msg.role === 'user' ? '#0070f3' : '#f0f0f0',
-              color: msg.role === 'user' ? '#fff' : '#000',
-              fontSize: 14,
-              lineHeight: 1.5
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
             }}
           >
-            {msg.role === 'assistant' && msg.isStreaming && msg.content === '' ? (
-              <TypingIndicator />
-            ) : msg.role === 'assistant' && !msg.isError ? (
-              <div className="md">
-                {splitAtPivots(msg.content, msg.steers).map((part, i) => (
-                  <div key={i}>
-                    {part.nudgeBefore && <SteerMarker nudge={part.nudgeBefore} />}
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
-                      {part.text}
-                    </ReactMarkdown>
-                  </div>
-                ))}
-                {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
-              </div>
-            ) : (
-              msg.content
+            {hasContent && (
+              <>
+                <span style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>
+                  {msg.role === 'user' ? 'You' : 'AI'}
+                </span>
+                <div
+                  style={{
+                    maxWidth: '80%',
+                    padding: '8px 12px',
+                    borderRadius: 12,
+                    background: msg.role === 'user' ? '#0070f3' : '#f0f0f0',
+                    color: msg.role === 'user' ? '#fff' : '#000',
+                    fontSize: 14,
+                    lineHeight: 1.5
+                  }}
+                >
+                  {msg.role === 'assistant' && msg.isStreaming && msg.content === '' ? (
+                    <TypingIndicator />
+                  ) : msg.role === 'assistant' ? (
+                    <div className="md">
+                      {splitAtPivots(msg.content, msg.steers).map((part, i) => (
+                        <div key={i}>
+                          {part.nudgeBefore && <SteerMarker nudge={part.nudgeBefore} />}
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+                            {part.text}
+                          </ReactMarkdown>
+                        </div>
+                      ))}
+                      {msg.isStreaming && <span style={{ opacity: 0.5 }}>▋</span>}
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
+              </>
+            )}
+            {msg.error && (
+              <>
+                <span style={{ fontSize: 11, color: '#e53e3e', marginBottom: 2, marginTop: hasContent ? 6 : 0 }}>
+                  Error
+                </span>
+                <div
+                  style={{
+                    maxWidth: '80%',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    background: 'rgba(229,62,62,0.15)',
+                    border: '1px solid rgba(229,62,62,0.4)',
+                    color: '#ffb4b4',
+                    fontSize: 13,
+                    lineHeight: 1.4
+                  }}
+                >
+                  {msg.error}
+                </div>
+              </>
             )}
           </div>
-        </div>
-      ))}
+        )
+      })}
       <div ref={bottomRef} />
     </div>
   )

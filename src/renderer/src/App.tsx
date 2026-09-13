@@ -223,14 +223,7 @@ export default function App() {
         // Let the voice catch up with the text before the turn is declared over.
         if (speaks) await queue.idleWait()
 
-        if (failure) {
-          paint(delivered ? `${delivered}\n\nError: ${failure}` : `Error: ${failure}`, {
-            isStreaming: false,
-            isError: true
-          })
-        } else {
-          paint(delivered, { isStreaming: false })
-        }
+        paint(delivered, { isStreaming: false, error: failure ?? undefined })
 
         // Record the assistant turn so context stays role-alternating — Claude
         // rejects a history where a user message has no paired reply. The steers
@@ -266,8 +259,8 @@ export default function App() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'user',
-          content: detail ? `Transcription failed — ${detail}` : 'Transcription failed',
-          isError: true
+          content: '',
+          error: detail ? `Transcription failed — ${detail}` : 'Transcription failed'
         })
         return
       }

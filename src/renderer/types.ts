@@ -5,7 +5,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
-  isError?: boolean
+  /** A failure unrelated to what the model said, rendered separately from `content`. */
+  error?: string
   /** Points where the user redirected this reply while it was still in flight. */
   steers?: SteerPivot[]
 }
