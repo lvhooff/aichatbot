@@ -3,6 +3,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ChatMessage } from '../types'
 import { splitAtPivots } from '../utils/steering'
+import { dangerSurfaceStyle } from '../styles'
 
 // Assistant replies are untrusted (LLM output can be steered by prompt
 // injection into emitting arbitrary links). Force links to open externally
@@ -149,10 +150,12 @@ export function ChatHistory({ messages, textMode }: Props) {
     >
       <style>{TYPING_ANIMATION}</style>
       {messages.map((msg) => {
-        // Suppress the speaker bubble entirely for a message that never got any
-        // content of its own (e.g. a transcription failure) — only the error
-        // block below renders, so nothing is misattributed to "You" or "AI".
-        const hasContent = msg.content !== '' || msg.isStreaming
+        // Suppress the speaker bubble only for a message that never had content
+        // of its own and carries an error (e.g. a transcription failure) — then
+        // just the error block below renders, so nothing is misattributed to
+        // "You" or "AI". A reply that legitimately finished empty, with no
+        // error, still gets its bubble so it isn't silently dropped.
+        const hasContent = msg.content !== '' || msg.isStreaming || !msg.error
         return (
           <div
             key={msg.id}
@@ -208,11 +211,9 @@ export function ChatHistory({ messages, textMode }: Props) {
                     maxWidth: '80%',
                     padding: '8px 12px',
                     borderRadius: 8,
-                    background: 'rgba(229,62,62,0.15)',
-                    border: '1px solid rgba(229,62,62,0.4)',
-                    color: '#ffb4b4',
                     fontSize: 13,
-                    lineHeight: 1.4
+                    lineHeight: 1.4,
+                    ...dangerSurfaceStyle
                   }}
                 >
                   {msg.error}

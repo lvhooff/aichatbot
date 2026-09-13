@@ -1,3 +1,5 @@
+import { dangerSurfaceStyle } from '../styles'
+
 interface Props {
   onClick: () => void
 }
@@ -13,13 +15,11 @@ export function StopButton({ onClick }: Props) {
         display: 'flex',
         alignItems: 'center',
         gap: 5,
-        background: 'rgba(229,62,62,0.15)',
-        border: '1px solid rgba(229,62,62,0.4)',
         borderRadius: 6,
-        color: '#ffb4b4',
         fontSize: 12,
         padding: '3px 10px',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        ...dangerSurfaceStyle
       }}
     >
       ■ Stop

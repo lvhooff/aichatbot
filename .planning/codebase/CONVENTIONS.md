@@ -108,7 +108,7 @@
 
 **Error States:**
 - Flags for error conditions: `errored = false` property tracks failure in `SpeechQueue`
-- Error display in React: `isError` boolean on message objects, styled differently in UI
+- Error display in React: `error?: string` field on message objects, rendered as its own block separate from the speaker's content
 - Provider-level validation: coerce invalid settings back to known-good defaults
 
 ## Logging
@@ -117,7 +117,7 @@
 
 **Patterns:**
 - No console.log in production code
-- Errors surfaced via UI flags: `isError` on ChatMessage, error boundaries via props
+- Errors surfaced via UI flags: `error?: string` on ChatMessage, error boundaries via props
 - Comments explain complex behavior instead of console traces
 - Test files may use vi.fn() to track calls instead of logging
 

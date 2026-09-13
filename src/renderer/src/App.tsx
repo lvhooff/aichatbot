@@ -10,6 +10,7 @@ import type { Message } from '../../main/providers/llm/interface'
 import { extractCompleteSentences } from '../utils/sentences'
 import { SpeechQueue } from '../utils/speech-queue'
 import { buildSteerMessages, joinContinuation, type SteerPivot } from '../utils/steering'
+import { dangerSurfaceStyle } from '../styles'
 
 // How much of a steered continuation to buffer before showing it, so a word the
 // model restates from the sentence it was cut off in can be stripped once rather
@@ -372,11 +373,9 @@ export default function App() {
             margin: '0 16px 8px',
             padding: '8px 12px',
             borderRadius: 8,
-            background: 'rgba(229,62,62,0.15)',
-            border: '1px solid rgba(229,62,62,0.4)',
-            color: '#ffb4b4',
             fontSize: 13,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            ...dangerSurfaceStyle
           }}
           title="Dismiss"
         >

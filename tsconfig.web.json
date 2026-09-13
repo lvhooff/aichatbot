@@ -8,6 +8,7 @@
     "src/renderer/hooks/**/*",
     "src/renderer/utils/**/*",
     "src/renderer/types.ts",
+    "src/renderer/styles.ts",
     "src/main/**/*",
     "src/preload/*.d.ts",
     "tests/renderer/**/*"
